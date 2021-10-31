@@ -119,7 +119,6 @@ help:
 	@echo following targets are available:
 	@echo		nrf52840_xxaa
 	@echo		flash      - flashing binary
-  $(info Serial result = $(INC_FOLDERS))
 
 TEMPLATE_PATH := $(NSDK_ROOT)/components/toolchain/gcc
 
