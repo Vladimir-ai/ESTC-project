@@ -1,0 +1,13 @@
+PROJECT_NAME     := blinky_pca10059_mbr
+TARGETS          := nrf52840_xxaa
+OUTPUT_DIRECTORY := _build
+
+PROJ_DIR = $(PWD)
+PLATFORM_DIR = $(PROJ_DIR)/pca10059/mbr
+NSDK_ROOT ?= /home/krevedko/VSU/ESTC/ESTC-NSDK
+
+GNU_INSTALL_ROOT ?= /usr/bin/
+GNU_VERSION ?= 11.2.0
+GNU_PREFIX ?= arm-none-eabi
+
+DFU_PORT ?= /dev/ttyACM0

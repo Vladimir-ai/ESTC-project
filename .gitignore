@@ -51,4 +51,6 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-pca10059/mbr/armgcc/_build
+#Temporary folders
+.vscode
+_build
