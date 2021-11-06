@@ -22,19 +22,18 @@ SRC_FILES += \
   $(NSDK_ROOT)/components/libraries/ringbuf/nrf_ringbuf.c \
   $(NSDK_ROOT)/components/libraries/strerror/nrf_strerror.c \
   $(NSDK_ROOT)/modules/nrfx/soc/nrfx_atomic.c \
-  $(PROJ_DIR)/main.c \
   $(NSDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
+  $(PROJ_DIR)/bsp_module/tutor_bsp.c \
+  $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
 INC_FOLDERS += \
   $(NSDK_ROOT)/components \
   $(NSDK_ROOT)/modules/nrfx/mdk \
-  $(PROJ_DIR) \
   $(NSDK_ROOT)/components/softdevice/mbr/headers \
   $(NSDK_ROOT)/components/libraries/strerror \
   $(NSDK_ROOT)/components/toolchain/cmsis/include \
   $(NSDK_ROOT)/components/libraries/util \
-  $(PLATFORM_DIR)/config \
   $(NSDK_ROOT)/components/libraries/balloc \
   $(NSDK_ROOT)/components/libraries/ringbuf \
   $(NSDK_ROOT)/modules/nrfx/hal \
@@ -50,6 +49,9 @@ INC_FOLDERS += \
   $(NSDK_ROOT)/components/libraries/memobj \
   $(NSDK_ROOT)/external/fprintf \
   $(NSDK_ROOT)/components/libraries/log/src \
+  $(PLATFORM_DIR)/config \
+  $(PROJ_DIR) \
+  $(PROJ_DIR)/bsp_module \
 
 # Libraries common to all targets
 LIB_FILES += \
