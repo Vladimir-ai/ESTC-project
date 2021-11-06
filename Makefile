@@ -5,50 +5,75 @@ $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
 
 # Source files common to all targets
 SRC_FILES += \
-  $(NSDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
+  $(NSDK_ROOT)/components/boards/boards.c \
   $(NSDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
   $(NSDK_ROOT)/components/libraries/log/src/nrf_log_str_formatter.c \
-  $(NSDK_ROOT)/components/boards/boards.c \
+  $(NSDK_ROOT)/components/libraries/log/src/nrf_log_default_backends.c \
+  $(NSDK_ROOT)/components/libraries/log/src/nrf_log_backend_usb.c \
+  $(NSDK_ROOT)/components/libraries/log/src/nrf_log_backend_serial.c \
   $(NSDK_ROOT)/components/libraries/util/app_error.c \
   $(NSDK_ROOT)/components/libraries/util/app_error_handler_gcc.c \
   $(NSDK_ROOT)/components/libraries/util/app_error_weak.c \
   $(NSDK_ROOT)/components/libraries/util/app_util_platform.c \
   $(NSDK_ROOT)/components/libraries/util/nrf_assert.c \
   $(NSDK_ROOT)/components/libraries/atomic/nrf_atomic.c \
+  $(NSDK_ROOT)/components/libraries/atomic_fifo/nrf_atfifo.c \
   $(NSDK_ROOT)/components/libraries/balloc/nrf_balloc.c \
-  $(NSDK_ROOT)/external/fprintf/nrf_fprintf.c \
-  $(NSDK_ROOT)/external/fprintf/nrf_fprintf_format.c \
   $(NSDK_ROOT)/components/libraries/memobj/nrf_memobj.c \
   $(NSDK_ROOT)/components/libraries/ringbuf/nrf_ringbuf.c \
   $(NSDK_ROOT)/components/libraries/strerror/nrf_strerror.c \
+  $(NSDK_ROOT)/components/libraries/usbd/app_usbd.c \
+  $(NSDK_ROOT)/components/libraries/usbd/app_usbd_core.c \
+  $(NSDK_ROOT)/components/libraries/usbd/app_usbd_string_desc.c \
+  $(NSDK_ROOT)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
+  $(NSDK_ROOT)/components/libraries/usbd/app_usbd_serial_num.c \
+  $(NSDK_ROOT)/components/libraries/timer/app_timer.c \
+  $(NSDK_ROOT)/integration/nrfx/legacy/nrf_drv_clock.c \
+  $(NSDK_ROOT)/integration/nrfx/legacy/nrf_drv_power.c \
+  $(NSDK_ROOT)/external/fprintf/nrf_fprintf.c \
+  $(NSDK_ROOT)/external/fprintf/nrf_fprintf_format.c \
+  $(NSDK_ROOT)/external/utf_converter/utf.c \
   $(NSDK_ROOT)/modules/nrfx/soc/nrfx_atomic.c \
   $(NSDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
+  $(NSDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
+  $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_usbd.c \
+  $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
+  $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
   $(PROJ_DIR)/bsp_module/tutor_bsp.c \
   $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
 INC_FOLDERS += \
   $(NSDK_ROOT)/components \
-  $(NSDK_ROOT)/modules/nrfx/mdk \
   $(NSDK_ROOT)/components/softdevice/mbr/headers \
-  $(NSDK_ROOT)/components/libraries/strerror \
   $(NSDK_ROOT)/components/toolchain/cmsis/include \
+  $(NSDK_ROOT)/components/drivers_nrf/nrf_soc_nosd \
+  $(NSDK_ROOT)/components/boards \
+  $(NSDK_ROOT)/components/libraries \
+  $(NSDK_ROOT)/components/libraries/timer \
+  $(NSDK_ROOT)/components/libraries/memobj \
+  $(NSDK_ROOT)/components/libraries/log/src \
+  $(NSDK_ROOT)/components/libraries/atomic \
   $(NSDK_ROOT)/components/libraries/util \
   $(NSDK_ROOT)/components/libraries/balloc \
   $(NSDK_ROOT)/components/libraries/ringbuf \
-  $(NSDK_ROOT)/modules/nrfx/hal \
+  $(NSDK_ROOT)/components/libraries/atomic_fifo \
+  $(NSDK_ROOT)/components/libraries/usbd \
   $(NSDK_ROOT)/components/libraries/bsp \
   $(NSDK_ROOT)/components/libraries/log \
-  $(NSDK_ROOT)/modules/nrfx \
+  $(NSDK_ROOT)/components/libraries/usbd/class/cdc \
+  $(NSDK_ROOT)/components/libraries/usbd/class/cdc/acm \
   $(NSDK_ROOT)/components/libraries/experimental_section_vars \
   $(NSDK_ROOT)/components/libraries/delay \
+  $(NSDK_ROOT)/components/libraries/strerror \
+  $(NSDK_ROOT)/modules/nrfx/hal \
+  $(NSDK_ROOT)/modules/nrfx \
+  $(NSDK_ROOT)/modules/nrfx/drivers/include \
+  $(NSDK_ROOT)/modules/nrfx/mdk \
   $(NSDK_ROOT)/integration/nrfx \
-  $(NSDK_ROOT)/components/drivers_nrf/nrf_soc_nosd \
-  $(NSDK_ROOT)/components/libraries/atomic \
-  $(NSDK_ROOT)/components/boards \
-  $(NSDK_ROOT)/components/libraries/memobj \
+  $(NSDK_ROOT)/integration/nrfx/legacy \
   $(NSDK_ROOT)/external/fprintf \
-  $(NSDK_ROOT)/components/libraries/log/src \
+  $(NSDK_ROOT)/external/utf_converter/ \
   $(PLATFORM_DIR)/config \
   $(PROJ_DIR) \
   $(PROJ_DIR)/bsp_module \
@@ -64,6 +89,7 @@ OPT = -O3 -g3
 # C flags common to all targets
 CFLAGS += $(OPT)
 CFLAGS += -DBOARD_PCA10059
+CFLAGS += -DUSE_APP_CONFIG
 CFLAGS += -DBSP_DEFINES_ONLY
 CFLAGS += -DCONFIG_GPIO_AS_PINRESET
 CFLAGS += -DFLOAT_ABI_HARD
