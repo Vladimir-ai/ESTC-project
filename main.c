@@ -12,11 +12,14 @@
 #include "app_usbd.h"
 #include "app_usbd_serial_num.h"
 
-#define DUTY_CICLE_UNIT_TIME_US         0x10U
-#define GET_PERCENTAGE(num)             ((num) & 0x7FU)
-#define GET_STATE(num)                  ((num) >> 7)
+#include "pwm_module.h"
 
-void logs_init()
+#define DUTY_CICLE_UNIT_TIME_US         0x10U
+
+/* static function declaration  */
+static void init_all(void);
+
+static void logs_init()
 {
     ret_code_t ret = NRF_LOG_INIT(NULL);
     APP_ERROR_CHECK(ret);
@@ -34,17 +37,7 @@ int main(void)
     uint8_t blink_num = 0;
     uint8_t current_cycle = 0;      /* Uses 7th bit to store state (increasing or decreasing), 0-6 bits to store percentage */
 
-    /* Init systick */
-    nrfx_systick_init();
-
-    /* Init logs */
-    logs_init();
-    NRF_LOG_INFO("Starting up the test project with USB logging");
-    NRF_LOG_PROCESS();
-
-    /* Init leds and btns */
-    init_leds();
-    init_btns();
+    init_all();
 
     /* Toggle LEDs. */
     while (true)
@@ -56,23 +49,15 @@ int main(void)
             while (blink_num < inv_num[i])
             {
                 current_cycle = 0;
-                while (current_cycle != 0x7FU)   /* 0x7F, 101 are reserved value */
+                while (current_cycle != 201U)
                 {
                     if (!read_btn_state())
                     {
-                        led_toggle(i);
-                        nrfx_systick_delay_us(DUTY_CICLE_UNIT_TIME_US * GET_PERCENTAGE(current_cycle));
+                        pwm_process_one_period(i, current_cycle > 100 ? 200U - current_cycle : current_cycle);
+                        current_cycle++;
 
-                        led_toggle(i);
-                        nrfx_systick_delay_us(DUTY_CICLE_UNIT_TIME_US * GET_PERCENTAGE(0x100U - current_cycle));
-
-                        /* Increase or decrease depending on state */
-                        current_cycle = GET_STATE(current_cycle) ? (current_cycle - 1) : (current_cycle + 1);
-
-                        /* Start decreasing if overflow */
                         if (current_cycle == 101)
                         {
-                            current_cycle = 0xE4U;
                             NRF_LOG_INFO("100%% duty cycle on %c LED, curr LED iter is %d/%d", led_color[i], blink_num + 1, inv_num[i]);
                             NRF_LOG_PROCESS();
                         }
@@ -91,4 +76,19 @@ int main(void)
 
         }
     }
+}
+
+static void init_all(void)
+{
+    /* Init systick */
+    nrfx_systick_init();
+
+    /* Init logs */
+    logs_init();
+    NRF_LOG_INFO("Starting up the test project with USB logging");
+    NRF_LOG_PROCESS();
+
+    /* Init leds and btns */
+    init_leds();
+    init_btns();
 }
