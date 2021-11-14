@@ -14,7 +14,8 @@
 
 #include "pwm_module.h"
 
-#define DUTY_CICLE_UNIT_TIME_US         0x10U
+#define DUTY_CICLE_UNIT_TIME_US         10U
+#define FULL_PERIOD                     200U
 
 /* static function declaration  */
 static void init_all(void);
@@ -34,6 +35,8 @@ int main(void)
 {
     const uint8_t inv_num[] = {6, 5, 7, 7};
     const char led_color[] = {'G', 'R', 'G', 'B'};
+
+    uint8_t led_idx = 0;
     uint8_t blink_num = 0;
     uint8_t current_cycle = 0;      /* Uses 7th bit to store state (increasing or decreasing), 0-6 bits to store percentage */
 
@@ -42,39 +45,40 @@ int main(void)
     /* Toggle LEDs. */
     while (true)
     {
-        for (uint8_t i = 0; i < LEDS_NUMBER; i++)
+        if (!read_btn_state())
         {
-            blink_num = 0;
-
-            while (blink_num < inv_num[i])
+            if (blink_num == inv_num[led_idx])
             {
-                current_cycle = 0;
-                while (current_cycle != 201U)
-                {
-                    if (!read_btn_state())
-                    {
-                        pwm_process_one_period(i, current_cycle > 100 ? 200U - current_cycle : current_cycle);
-                        current_cycle++;
+                blink_num = 0;
+                led_idx = (led_idx + 1) % LEDS_NUMBER;
 
-                        if (current_cycle == 101)
-                        {
-                            NRF_LOG_INFO("100%% duty cycle on %c LED, curr LED iter is %d/%d", led_color[i], blink_num + 1, inv_num[i]);
-                            NRF_LOG_PROCESS();
-                        }
-                    }
-
-                    LOG_BACKEND_USB_PROCESS();  /* Process here to maintain connect */
-                    /* Don't spam PC with logs when btn isn't pressed */
-                }
-
-                blink_num++;
-
-                /* Process current LED and it's iter */
-                NRF_LOG_INFO("Btn pressed on %c LED, curr LED iter is %d/%d", led_color[i], blink_num, inv_num[i]);
-                NRF_LOG_PROCESS();  /* Process logs only when we have logs */
+                continue;
             }
 
+            pwm_process_one_period(led_idx, current_cycle > 100 ? 200U - current_cycle : current_cycle);
+            current_cycle++;
+
+            switch (current_cycle)
+            {
+            case 101:
+                NRF_LOG_INFO("100%% duty cycle on %c LED, curr LED iter is %d/%d", led_color[led_idx], blink_num + 1, inv_num[led_idx]);
+                NRF_LOG_PROCESS();
+                break;
+
+            case 201:
+                NRF_LOG_INFO("Btn cycle ended on %c LED, curr LED iter is %d/%d", led_color[led_idx], blink_num + 1, inv_num[led_idx]);
+                NRF_LOG_PROCESS();
+                current_cycle = 0;
+                blink_num++;
+                break;
+
+            default:
+                break;
+            }
         }
+
+        LOG_BACKEND_USB_PROCESS();  /* Process here to maintain connect */
+        /* Don't spam PC with logs when btn isn't pressed */
     }
 }
 
