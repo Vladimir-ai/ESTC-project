@@ -14,8 +14,12 @@
 
 #include "pwm_module.h"
 
-#define DUTY_CICLE_UNIT_TIME_US         10U
-#define FULL_PERIOD                     200U
+#define DUTY_CICLE_UNIT_TIME_US                     10U
+#define DUTY_CICLE_TIME_US                          (100U * DUTY_CICLE_UNIT_TIME_US)
+#define FULL_PERIOD_IN_DUTY_PERCENT                 200U    /* 256 - MAX */
+#define HALF_PERIOD_IN_DUTY_PERCENT                 (FULL_PERIOD_IN_DUTY_PERCENT / 2)
+
+#define GET_PERCENT(num, max_value)                 ((num) * 100 / (max_value))
 
 /* static function declaration  */
 static void init_all(void);
@@ -38,9 +42,14 @@ int main(void)
 
     uint8_t led_idx = 0;
     uint8_t blink_num = 0;
-    uint8_t current_cycle = 0;      /* Uses 7th bit to store state (increasing or decreasing), 0-6 bits to store percentage */
+    uint8_t current_absolute_period = 0;      /* Absolute cycle */
+    uint8_t current_cycle_percent = 0;
+    nrfx_systick_state_t systick_state;
 
+    nrfx_systick_init();
     init_all();
+
+    nrfx_systick_get(&systick_state);
 
     /* Toggle LEDs. */
     while (true)
@@ -55,28 +64,41 @@ int main(void)
                 continue;
             }
 
-            pwm_process_one_period(led_idx, current_cycle > 100 ? 200U - current_cycle : current_cycle);
-            current_cycle++;
+            current_cycle_percent = current_absolute_period > HALF_PERIOD_IN_DUTY_PERCENT
+                    ? GET_PERCENT(FULL_PERIOD_IN_DUTY_PERCENT - current_absolute_period, HALF_PERIOD_IN_DUTY_PERCENT)
+                    : GET_PERCENT(current_absolute_period, HALF_PERIOD_IN_DUTY_PERCENT);
 
-            switch (current_cycle)
+            /* Check active phase */
+            if (!nrfx_systick_test(&systick_state, current_cycle_percent * DUTY_CICLE_UNIT_TIME_US))
             {
-            case 101:
-                NRF_LOG_INFO("100%% duty cycle on %c LED, curr LED iter is %d/%d", led_color[led_idx], blink_num + 1, inv_num[led_idx]);
-                NRF_LOG_PROCESS();
-                break;
+                led_on(led_idx);
+            }
+            /* Check not active phase */
+            else if (!nrfx_systick_test(&systick_state, 100U * DUTY_CICLE_UNIT_TIME_US))
+            {
+                led_off(led_idx);
+            }
+            /* Period finished */
+            else
+            {
+                if (current_absolute_period == HALF_PERIOD_IN_DUTY_PERCENT + 1)
+                {
+                    NRF_LOG_INFO("100%% duty cycle on %c LED, curr LED iter is %d/%d", led_color[led_idx], blink_num + 1, inv_num[led_idx]);
+                }
+                else if (current_absolute_period == FULL_PERIOD_IN_DUTY_PERCENT + 1)
+                {
+                    NRF_LOG_INFO("Btn cycle ended on %c LED, curr LED iter is %d/%d", led_color[led_idx], blink_num + 1, inv_num[led_idx]);
+                    current_absolute_period = 0;
+                    blink_num++;
+                }
 
-            case 201:
-                NRF_LOG_INFO("Btn cycle ended on %c LED, curr LED iter is %d/%d", led_color[led_idx], blink_num + 1, inv_num[led_idx]);
-                NRF_LOG_PROCESS();
-                current_cycle = 0;
-                blink_num++;
-                break;
-
-            default:
-                break;
+                current_absolute_period++;
+                led_off(led_idx);
+                nrfx_systick_get(&systick_state);
             }
         }
 
+        NRF_LOG_FLUSH();
         LOG_BACKEND_USB_PROCESS();  /* Process here to maintain connect */
         /* Don't spam PC with logs when btn isn't pressed */
     }
