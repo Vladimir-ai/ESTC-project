@@ -27,7 +27,7 @@ SRC_FILES += \
   $(NSDK_ROOT)/components/libraries/usbd/app_usbd_string_desc.c \
   $(NSDK_ROOT)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
   $(NSDK_ROOT)/components/libraries/usbd/app_usbd_serial_num.c \
-  $(NSDK_ROOT)/components/libraries/timer/app_timer.c \
+  $(NSDK_ROOT)/components/libraries/timer/app_timer2.c \
   $(NSDK_ROOT)/integration/nrfx/legacy/nrf_drv_clock.c \
   $(NSDK_ROOT)/integration/nrfx/legacy/nrf_drv_power.c \
   $(NSDK_ROOT)/external/fprintf/nrf_fprintf.c \
@@ -39,7 +39,9 @@ SRC_FILES += \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_usbd.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
+  $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
   $(PROJ_DIR)/bsp_module/tutor_bsp.c \
+  $(PROJ_DIR)/pwm_module/pwm_module.c \
   $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
@@ -65,6 +67,7 @@ INC_FOLDERS += \
   $(NSDK_ROOT)/components/libraries/usbd/class/cdc/acm \
   $(NSDK_ROOT)/components/libraries/experimental_section_vars \
   $(NSDK_ROOT)/components/libraries/delay \
+  $(NSDK_ROOT)/components/libraries/sortlist \
   $(NSDK_ROOT)/components/libraries/strerror \
   $(NSDK_ROOT)/modules/nrfx/hal \
   $(NSDK_ROOT)/modules/nrfx \
@@ -77,6 +80,7 @@ INC_FOLDERS += \
   $(PLATFORM_DIR)/config \
   $(PROJ_DIR) \
   $(PROJ_DIR)/bsp_module \
+  $(PROJ_DIR)/pwm_module \
 
 # Libraries common to all targets
 LIB_FILES += \
@@ -93,6 +97,8 @@ CFLAGS += -DUSE_APP_CONFIG
 CFLAGS += -DBSP_DEFINES_ONLY
 CFLAGS += -DCONFIG_GPIO_AS_PINRESET
 CFLAGS += -DFLOAT_ABI_HARD
+CFLAGS += -DAPP_TIMER_V2
+CFLAGS += -DAPP_TIMER_V2_RTC1_ENABLED
 CFLAGS += -DMBR_PRESENT
 CFLAGS += -DNRF52840_XXAA
 CFLAGS += -mcpu=cortex-m4
