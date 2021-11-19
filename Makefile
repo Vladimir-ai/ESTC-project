@@ -28,6 +28,8 @@ SRC_FILES += \
   $(NSDK_ROOT)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
   $(NSDK_ROOT)/components/libraries/usbd/app_usbd_serial_num.c \
   $(NSDK_ROOT)/components/libraries/timer/app_timer2.c \
+  $(NSDK_ROOT)/components/libraries/timer/drv_rtc.c \
+  $(NSDK_ROOT)/components/libraries/sortlist/nrf_sortlist.c \
   $(NSDK_ROOT)/integration/nrfx/legacy/nrf_drv_clock.c \
   $(NSDK_ROOT)/integration/nrfx/legacy/nrf_drv_power.c \
   $(NSDK_ROOT)/external/fprintf/nrf_fprintf.c \
@@ -40,6 +42,7 @@ SRC_FILES += \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
+  $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
   $(PROJ_DIR)/bsp_module/tutor_bsp.c \
   $(PROJ_DIR)/pwm_module/pwm_module.c \
   $(PROJ_DIR)/main.c \
