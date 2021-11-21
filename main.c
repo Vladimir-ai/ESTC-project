@@ -19,8 +19,9 @@
 #include "nrfx_pwm.h"
 
 /* Timer timeouts */
-#define BTN_DISABLE_ACTIVITY_TIMEOUT          (APP_TIMER_CLOCK_FREQ / 9) /* part of sec */
+#define BTN_DISABLE_ACTIVITY_TIMEOUT          (APP_TIMER_CLOCK_FREQ >> 4) /* part of sec */
 #define BTN_DOUBLE_CLICK_TIMEOUT              APP_TIMER_CLOCK_FREQ        /* 1 sec timeout */
+#define BTN_LONG_CLICK_TIMEOUT                (APP_TIMER_CLOCK_FREQ >> 1) /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT */
 
 /* Application flags */
 #define APP_FLAG_IS_RUNNING_MASK                 0x01U
@@ -30,7 +31,7 @@
 
 /* static vars declaration */
 static nrf_pwm_values_individual_t sequence_values;
-
+static uint32_t timer_start_timestamp;
 static uint8_t app_flags = 0;
 APP_TIMER_DEF(timer_id_double_click_timeout);
 APP_TIMER_DEF(timer_id_en_btn_timeout);
@@ -62,6 +63,7 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
 
             if (!(app_flags & APP_FLAG_FST_CLICK_OCCURRED_MASK))
             {
+                timer_start_timestamp = app_timer_cnt_get();
                 app_flags |= APP_FLAG_FST_CLICK_OCCURRED_MASK;
                 app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT, NULL);
             }
@@ -71,7 +73,7 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
                 app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
             }
         }
-        else
+        else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) > BTN_LONG_CLICK_TIMEOUT)
         {
             NRF_LOG_INFO("But released");
             app_timer_stop(timer_id_double_click_timeout);
