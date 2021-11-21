@@ -19,52 +19,68 @@
 #include "nrfx_pwm.h"
 
 /* Timer timeouts */
-#define BTN_DISABLE_ACTIVITY_TIMEOUT          (APP_TIMER_CLOCK_FREQ >> 4) /* part of sec */
+#define BTN_DISABLE_ACTIVITY_TIMEOUT          (APP_TIMER_CLOCK_FREQ / 9) /* part of sec */
 #define BTN_DOUBLE_CLICK_TIMEOUT              APP_TIMER_CLOCK_FREQ        /* 1 sec timeout */
 
 /* Application flags */
 #define APP_FLAG_IS_RUNNING_MASK                 0x01U
 #define APP_FLAG_FST_CLICK_OCCURRED_MASK         0x02U
+#define APP_FLAG_BTN_STATE_MASK                  0x04U
+#define APP_FLAG_BTN_DISABLED_MASK               0x08U
 
 /* static vars declaration */
 static nrf_pwm_values_individual_t sequence_values;
 
-static uint32_t timer_start_timestamp;
 static uint8_t app_flags = 0;
-APP_TIMER_DEF(timeout_timer_id);
+APP_TIMER_DEF(timer_id_double_click_timeout);
+APP_TIMER_DEF(timer_id_en_btn_timeout);
 
 /* static function declaration  */
 static void init_all(const nrfx_gpiote_in_config_t *btn_gpiote_cfg);
 static void init_pwm(nrfx_pwm_t const * const pwm_instance, const nrfx_pwm_config_t *pwm_config);
 
-static void timer_timeout_handler(void *p_context)
+static void timer_double_click_timeout_handler(void *p_context)
 {
-    /* Clear fst click if it isn't occured */
     app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
+}
+
+static void timer_en_btn_timeout_handler(void *p_context)
+{
+    app_flags &= ~APP_FLAG_BTN_DISABLED_MASK;
 }
 
 static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
-    switch (action)
-    {
-    case NRF_GPIOTE_POLARITY_HITOLO:
-        if (!(app_flags & APP_FLAG_FST_CLICK_OCCURRED_MASK))
-        {
-            app_flags |= APP_FLAG_FST_CLICK_OCCURRED_MASK;
-            timer_start_timestamp = app_timer_cnt_get();
+    /* Track btn state: 0 is released, 1 is pressed now */
+    app_flags ^= APP_FLAG_BTN_STATE_MASK;
 
-            app_timer_start(timeout_timer_id, BTN_DOUBLE_CLICK_TIMEOUT, NULL);
-        }
-        /* timeout used to disable undefined button behavior after press */
-        else if ((app_timer_cnt_get() - timer_start_timestamp) > BTN_DISABLE_ACTIVITY_TIMEOUT)
+    if (~app_flags & APP_FLAG_BTN_DISABLED_MASK)
+    {
+        if (app_flags & APP_FLAG_BTN_STATE_MASK)
         {
-            app_flags ^= APP_FLAG_IS_RUNNING_MASK;
+            NRF_LOG_INFO("But pressed");
+
+            if (!(app_flags & APP_FLAG_FST_CLICK_OCCURRED_MASK))
+            {
+                app_flags |= APP_FLAG_FST_CLICK_OCCURRED_MASK;
+                app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT, NULL);
+            }
+            else
+            {
+                app_flags ^= APP_FLAG_IS_RUNNING_MASK;
+                app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
+            }
+        }
+        else
+        {
+            NRF_LOG_INFO("But released");
+            app_timer_stop(timer_id_double_click_timeout);
             app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
         }
-        break;
 
-    default:
-        break;
+        /* Always disable any actions with btn if it was enabled */
+        app_flags |= APP_FLAG_BTN_DISABLED_MASK;
+        app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT, NULL);
     }
 }
 
@@ -126,9 +142,8 @@ int main(void)
     const nrfx_pwm_t pwm_instance = NRFX_PWM_INSTANCE(0);
     const nrf_pwm_sequence_t pwm_sequence = PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(sequence_values);
 
-
     const nrfx_gpiote_in_config_t btn_gpiote_cfg = {
-        .sense = NRF_GPIOTE_POLARITY_HITOLO,
+        .sense = NRF_GPIOTE_POLARITY_TOGGLE,
         .pull = NRF_GPIO_PIN_PULLUP,
         .is_watcher = false,
         .hi_accuracy = false,
@@ -177,7 +192,9 @@ static void init_all(const nrfx_gpiote_in_config_t *btn_gpiote_cfg)
     nrfx_gpiote_in_event_enable(BUTTON_1, true);
 
     APP_ERROR_CHECK(app_timer_init());
-    APP_ERROR_CHECK(app_timer_create(&timeout_timer_id, APP_TIMER_MODE_SINGLE_SHOT, &timer_timeout_handler));
+    APP_ERROR_CHECK(app_timer_create(&timer_id_double_click_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_double_click_timeout_handler));
+    APP_ERROR_CHECK(app_timer_create(&timer_id_en_btn_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_en_btn_timeout_handler));
+
     NRF_LOG_INFO("App timer initiated");
 
     NRF_LOG_FLUSH();
