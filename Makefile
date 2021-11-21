@@ -43,6 +43,7 @@ SRC_FILES += \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
+  $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_pwm.c \
   $(PROJ_DIR)/bsp_module/tutor_bsp.c \
   $(PROJ_DIR)/pwm_module/pwm_module.c \
   $(PROJ_DIR)/main.c \
