@@ -21,9 +21,9 @@
 #include "hsv_to_rgb.h"
 
 /* Timer timeouts ==============================================*/
-#define BTN_DISABLE_ACTIVITY_TIMEOUT (APP_TIMER_CLOCK_FREQ >> 4) /* part of sec */
+#define BTN_DISABLE_ACTIVITY_TIMEOUT (APP_TIMER_CLOCK_FREQ / 10) /* part of sec */
 #define BTN_DOUBLE_CLICK_TIMEOUT APP_TIMER_CLOCK_FREQ            /* 1 sec timeout */
-#define BTN_LONG_CLICK_TIMEOUT (APP_TIMER_CLOCK_FREQ >> 2)       /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT */
+#define BTN_LONG_CLICK_TIMEOUT (APP_TIMER_CLOCK_FREQ >> 1)       /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT */
 
 /* Application flags ============================================*/
 #define APP_FLAG_IS_RUNNING_MASK 0x01U
@@ -67,6 +67,7 @@ static void timer_double_click_timeout_handler(void *p_context)
 
 static void timer_en_btn_timeout_handler(void *p_context)
 {
+  /* btn value at the end of disable timeout */
   if (app_flags & APP_FLAG_BTN_STATE_MASK)
   {
     app_flags |= APP_FLAG_IS_RUNNING_MASK;
@@ -103,10 +104,15 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
         pwm_indicator_period = 0;
       }
     }
-    else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) > BTN_LONG_CLICK_TIMEOUT)
+    else
     {
       NRF_LOG_INFO("Btn released");
-      app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
+
+      /* It isn't double click */
+      if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT)
+      {
+        app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
+      }
     }
 
     /* Always disable any actions with btn if it was enabled */
@@ -127,7 +133,7 @@ static void rgb_pwm_handler(nrfx_pwm_evt_type_t event_type)
       rgb_sequence_values.channel_2 = current_params.green;
       rgb_sequence_values.channel_3 = current_params.blue;
 
-      NRF_LOG_INFO("\nCurrent values:");
+      NRF_LOG_INFO("Current values:");
       NRF_LOG_INFO("r: %d, g: %d, b: %d", current_params.red, current_params.green, current_params.blue);
       NRF_LOG_INFO("h: %d, s: %d, v: %d", current_params.hue, current_params.saturation, current_params.brightness);
     }
