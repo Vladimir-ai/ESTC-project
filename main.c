@@ -62,102 +62,102 @@ static void init_indicator_pwm(nrfx_pwm_t const *const pwm_instance, nrfx_pwm_co
 /* interrupt handlers ============================================== */
 static void timer_double_click_timeout_handler(void *p_context)
 {
-    app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
+  app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
 }
 
 static void timer_en_btn_timeout_handler(void *p_context)
 {
-    if (app_flags & APP_FLAG_BTN_STATE_MASK)
-    {
-        app_flags |= APP_FLAG_IS_RUNNING_MASK;
-    }
-    else
-    {
-        app_flags &= ~APP_FLAG_IS_RUNNING_MASK;
-    }
+  if (app_flags & APP_FLAG_BTN_STATE_MASK)
+  {
+    app_flags |= APP_FLAG_IS_RUNNING_MASK;
+  }
+  else
+  {
+    app_flags &= ~APP_FLAG_IS_RUNNING_MASK;
+  }
 
-    app_flags &= ~APP_FLAG_BTN_DISABLED_MASK;
+  app_flags &= ~APP_FLAG_BTN_DISABLED_MASK;
 }
 
 static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
-    /* Track btn state: 0 is released, 1 is pressed now */
-    app_flags ^= APP_FLAG_BTN_STATE_MASK;
+  /* Track btn state: 0 is released, 1 is pressed now */
+  app_flags ^= APP_FLAG_BTN_STATE_MASK;
 
-    if (!(app_flags & APP_FLAG_BTN_DISABLED_MASK))
+  if (!(app_flags & APP_FLAG_BTN_DISABLED_MASK))
+  {
+    if (app_flags & APP_FLAG_BTN_STATE_MASK)
     {
-        if (app_flags & APP_FLAG_BTN_STATE_MASK)
-        {
-            NRF_LOG_INFO("Btn pressed");
+      NRF_LOG_INFO("Btn pressed");
 
-            if (!(app_flags & APP_FLAG_FST_CLICK_OCCURRED_MASK))
-            {
-                timer_start_timestamp = app_timer_cnt_get();
-                app_flags |= APP_FLAG_FST_CLICK_OCCURRED_MASK;
-                app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT, NULL);
-            }
-            else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT)
-            {
-                app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
-                current_mode = (current_mode + 1) % MODES_COUNT;
-                pwm_indicator_period = 0;
-            }
-        }
-        else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) > BTN_LONG_CLICK_TIMEOUT)
-        {
-            NRF_LOG_INFO("Btn released");
-            app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
-        }
-
-        /* Always disable any actions with btn if it was enabled */
-        app_flags |= APP_FLAG_BTN_DISABLED_MASK;
-        app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT, NULL);
+      if (!(app_flags & APP_FLAG_FST_CLICK_OCCURRED_MASK))
+      {
+        timer_start_timestamp = app_timer_cnt_get();
+        app_flags |= APP_FLAG_FST_CLICK_OCCURRED_MASK;
+        app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT, NULL);
+      }
+      else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT)
+      {
+        app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
+        current_mode = (current_mode + 1) % MODES_COUNT;
+        pwm_indicator_period = 0;
+      }
     }
+    else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) > BTN_LONG_CLICK_TIMEOUT)
+    {
+      NRF_LOG_INFO("Btn released");
+      app_flags &= ~APP_FLAG_FST_CLICK_OCCURRED_MASK;
+    }
+
+    /* Always disable any actions with btn if it was enabled */
+    app_flags |= APP_FLAG_BTN_DISABLED_MASK;
+    app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT, NULL);
+  }
 }
 
 static void rgb_pwm_handler(nrfx_pwm_evt_type_t event_type)
 {
-    if (event_type == NRFX_PWM_EVT_FINISHED)
+  if (event_type == NRFX_PWM_EVT_FINISHED)
+  {
+    if (app_flags & APP_FLAG_IS_RUNNING_MASK)
     {
-        if (app_flags & APP_FLAG_IS_RUNNING_MASK)
-        {
-            color_changing_machine(&current_params, COLOR_CHANGE_STEP, current_mode);
+      color_changing_machine(&current_params, COLOR_CHANGE_STEP, current_mode);
 
-            rgb_sequence_values.channel_1 = current_params.red;
-            rgb_sequence_values.channel_2 = current_params.green;
-            rgb_sequence_values.channel_3 = current_params.blue;
+      rgb_sequence_values.channel_1 = current_params.red;
+      rgb_sequence_values.channel_2 = current_params.green;
+      rgb_sequence_values.channel_3 = current_params.blue;
 
-            NRF_LOG_INFO("\nCurrent values:");
-            NRF_LOG_INFO("r: %d, g: %d, b: %d", current_params.red, current_params.green, current_params.blue);
-            NRF_LOG_INFO("h: %d, s: %d, v: %d", current_params.hue, current_params.saturation, current_params.brightness);
-        }
+      NRF_LOG_INFO("\nCurrent values:");
+      NRF_LOG_INFO("r: %d, g: %d, b: %d", current_params.red, current_params.green, current_params.blue);
+      NRF_LOG_INFO("h: %d, s: %d, v: %d", current_params.hue, current_params.saturation, current_params.brightness);
     }
+  }
 }
 
 static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
 {
-    if (event_type == NRFX_PWM_EVT_FINISHED)
+  if (event_type == NRFX_PWM_EVT_FINISHED)
+  {
+    /* LED is always on */
+    if (step_list[current_mode] >= PWM_INDICATOR_TOP_VALUE)
     {
-        /* LED is always on */
-        if (step_list[current_mode] >= PWM_INDICATOR_TOP_VALUE)
-        {
-            pwm_indicator_sequence_values.channel_0 = PWM_INDICATOR_TOP_VALUE;
-        }
-        else
-        {
-            /* handle overflow */
-            if (pwm_indicator_period >= 2U * PWM_INDICATOR_TOP_VALUE)
-            {
-                pwm_indicator_period = 0;
-            }
-
-            pwm_indicator_sequence_values.channel_0 = pwm_indicator_period > PWM_INDICATOR_TOP_VALUE
-                                                          ? 2U * PWM_INDICATOR_TOP_VALUE - pwm_indicator_period
-                                                          : pwm_indicator_period;
-
-            pwm_indicator_period += step_list[current_mode];
-        }
+      pwm_indicator_sequence_values.channel_0 = PWM_INDICATOR_TOP_VALUE;
     }
+    else
+    {
+      /* handle overflow */
+      if (pwm_indicator_period >= 2U * PWM_INDICATOR_TOP_VALUE)
+      {
+        pwm_indicator_period = 0;
+      }
+
+      pwm_indicator_sequence_values.channel_0 = pwm_indicator_period > PWM_INDICATOR_TOP_VALUE
+                                                    ? 2U * PWM_INDICATOR_TOP_VALUE - pwm_indicator_period
+                                                    : pwm_indicator_period;
+
+      pwm_indicator_period += step_list[current_mode];
+    }
+  }
 }
 
 /**
@@ -168,113 +168,113 @@ static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
  */
 int main(void)
 {
-    /* conig structures ====================================== */
-    nrfx_pwm_config_t pwm_rgb_config = NRFX_PWM_DEFAULT_CONFIG;
-    nrfx_pwm_config_t pwm_indicator_config = NRFX_PWM_DEFAULT_CONFIG;
+  /* conig structures ====================================== */
+  nrfx_pwm_config_t pwm_rgb_config = NRFX_PWM_DEFAULT_CONFIG;
+  nrfx_pwm_config_t pwm_indicator_config = NRFX_PWM_DEFAULT_CONFIG;
 
-    const nrfx_pwm_t pwm_rgb_instance = NRFX_PWM_INSTANCE(0);
-    const nrfx_pwm_t pwm_indicator_instance = NRFX_PWM_INSTANCE(1);
+  const nrfx_pwm_t pwm_rgb_instance = NRFX_PWM_INSTANCE(0);
+  const nrfx_pwm_t pwm_indicator_instance = NRFX_PWM_INSTANCE(1);
 
-    const nrf_pwm_sequence_t pwm_rgb_sequence = PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(rgb_sequence_values);
-    const nrf_pwm_sequence_t pwm_indicator_sequence = PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(pwm_indicator_sequence_values);
+  const nrf_pwm_sequence_t pwm_rgb_sequence = PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(rgb_sequence_values);
+  const nrf_pwm_sequence_t pwm_indicator_sequence = PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(pwm_indicator_sequence_values);
 
-    const nrfx_gpiote_in_config_t btn_gpiote_cfg = {
-        .sense = NRF_GPIOTE_POLARITY_TOGGLE,
-        .pull = NRF_GPIO_PIN_PULLUP,
-        .is_watcher = false,
-        .hi_accuracy = false,
-        .skip_gpio_setup = true};
+  const nrfx_gpiote_in_config_t btn_gpiote_cfg = {
+      .sense = NRF_GPIOTE_POLARITY_TOGGLE,
+      .pull = NRF_GPIO_PIN_PULLUP,
+      .is_watcher = false,
+      .hi_accuracy = false,
+      .skip_gpio_setup = true};
 
-    /* RGB pwm */
-    init_rgb_pwm(&pwm_rgb_instance, &pwm_rgb_config);
-    nrfx_pwm_simple_playback(&pwm_rgb_instance, &pwm_rgb_sequence,
-                             PWM_RGB_CYCLES_FOR_ONE_STEP, NRFX_PWM_FLAG_LOOP);
+  /* RGB pwm */
+  init_rgb_pwm(&pwm_rgb_instance, &pwm_rgb_config);
+  nrfx_pwm_simple_playback(&pwm_rgb_instance, &pwm_rgb_sequence,
+                           PWM_RGB_CYCLES_FOR_ONE_STEP, NRFX_PWM_FLAG_LOOP);
 
-    /* LEG pwm */
-    init_indicator_pwm(&pwm_indicator_instance, &pwm_indicator_config);
-    nrfx_pwm_simple_playback(&pwm_indicator_instance, &pwm_indicator_sequence,
-                             PWM_INDICATOR_CYCLES_FOR_ONE_STEP, NRFX_PWM_FLAG_LOOP);
+  /* LEG pwm */
+  init_indicator_pwm(&pwm_indicator_instance, &pwm_indicator_config);
+  nrfx_pwm_simple_playback(&pwm_indicator_instance, &pwm_indicator_sequence,
+                           PWM_INDICATOR_CYCLES_FOR_ONE_STEP, NRFX_PWM_FLAG_LOOP);
 
-    init_all(&btn_gpiote_cfg);
+  init_all(&btn_gpiote_cfg);
 
-    /* Toggle LEDs. */
-    while (true)
-    {
-        __WFE();
+  /* Toggle LEDs. */
+  while (true)
+  {
+    __WFE();
 
-        NRF_LOG_FLUSH();
-        LOG_BACKEND_USB_PROCESS(); /* Process here to maintain connect */
-        /* Don't spam PC with logs when btn isn't pressed */
-    }
+    NRF_LOG_FLUSH();
+    LOG_BACKEND_USB_PROCESS(); /* Process here to maintain connect */
+                               /* Don't spam PC with logs when btn isn't pressed */
+  }
 }
 
 /* Init functions =============================================== */
 static void logs_init()
 {
-    ret_code_t ret = NRF_LOG_INIT(NULL);
-    APP_ERROR_CHECK(ret);
+  ret_code_t ret = NRF_LOG_INIT(NULL);
+  APP_ERROR_CHECK(ret);
 
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
+  NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
 static void init_rgb_pwm(nrfx_pwm_t const *const pwm_instance, nrfx_pwm_config_t *pwm_config)
 {
-    pwm_config->output_pins[0] = NRFX_PWM_PIN_NOT_USED;
-    APP_ERROR_CHECK(nrfx_pwm_init(pwm_instance, pwm_config, rgb_pwm_handler));
-    NRF_LOG_INFO("PWM Initiated");
+  pwm_config->output_pins[0] = NRFX_PWM_PIN_NOT_USED;
+  APP_ERROR_CHECK(nrfx_pwm_init(pwm_instance, pwm_config, rgb_pwm_handler));
+  NRF_LOG_INFO("PWM Initiated");
 
-    rgb_sequence_values.channel_0 = 0;
-    rgb_sequence_values.channel_1 = 0;
-    rgb_sequence_values.channel_2 = 0;
-    rgb_sequence_values.channel_3 = 0;
+  rgb_sequence_values.channel_0 = 0;
+  rgb_sequence_values.channel_1 = 0;
+  rgb_sequence_values.channel_2 = 0;
+  rgb_sequence_values.channel_3 = 0;
 
-    NRF_LOG_FLUSH();
+  NRF_LOG_FLUSH();
 }
 
 static void init_indicator_pwm(nrfx_pwm_t const *const pwm_instance, nrfx_pwm_config_t *pwm_config)
 {
-    uint8_t i = 0;
-    pwm_config->output_pins[i++] = LED_1;
-    pwm_config->output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
-    pwm_config->output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
-    pwm_config->output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
-    pwm_config->top_value = PWM_INDICATOR_TOP_VALUE;
+  uint8_t i = 0;
+  pwm_config->output_pins[i++] = LED_1;
+  pwm_config->output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
+  pwm_config->output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
+  pwm_config->output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
+  pwm_config->top_value = PWM_INDICATOR_TOP_VALUE;
 
-    APP_ERROR_CHECK(nrfx_pwm_init(pwm_instance, pwm_config, indicator_pwm_handler));
-    NRF_LOG_INFO("PWM Initiated");
+  APP_ERROR_CHECK(nrfx_pwm_init(pwm_instance, pwm_config, indicator_pwm_handler));
+  NRF_LOG_INFO("PWM Initiated");
 
-    pwm_indicator_sequence_values.channel_0 = 0;
-    pwm_indicator_sequence_values.channel_1 = 0;
-    pwm_indicator_sequence_values.channel_2 = 0;
-    pwm_indicator_sequence_values.channel_3 = 0;
+  pwm_indicator_sequence_values.channel_0 = 0;
+  pwm_indicator_sequence_values.channel_1 = 0;
+  pwm_indicator_sequence_values.channel_2 = 0;
+  pwm_indicator_sequence_values.channel_3 = 0;
 
-    NRF_LOG_FLUSH();
+  NRF_LOG_FLUSH();
 }
 
 static void init_all(const nrfx_gpiote_in_config_t *btn_gpiote_cfg)
 {
-    /* Init systick */
-    nrfx_systick_init();
+  /* Init systick */
+  nrfx_systick_init();
 
-    /* Init logs */
-    logs_init();
-    NRF_LOG_INFO("Starting up the test project with USB logging");
+  /* Init logs */
+  logs_init();
+  NRF_LOG_INFO("Starting up the test project with USB logging");
 
-    /* Init leds and btns */
-    init_leds();
-    init_btns();
+  /* Init leds and btns */
+  init_leds();
+  init_btns();
 
-    /* Init gpiote */
-    APP_ERROR_CHECK(nrfx_gpiote_init());
-    APP_ERROR_CHECK(nrfx_gpiote_in_init(BUTTON_1, btn_gpiote_cfg, &btn_pressed_evt_handler));
-    NRF_LOG_INFO("GPIOTE initiated");
+  /* Init gpiote */
+  APP_ERROR_CHECK(nrfx_gpiote_init());
+  APP_ERROR_CHECK(nrfx_gpiote_in_init(BUTTON_1, btn_gpiote_cfg, &btn_pressed_evt_handler));
+  NRF_LOG_INFO("GPIOTE initiated");
 
-    nrfx_gpiote_in_event_enable(BUTTON_1, true);
+  nrfx_gpiote_in_event_enable(BUTTON_1, true);
 
-    APP_ERROR_CHECK(app_timer_init());
-    APP_ERROR_CHECK(app_timer_create(&timer_id_double_click_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_double_click_timeout_handler));
-    APP_ERROR_CHECK(app_timer_create(&timer_id_en_btn_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_en_btn_timeout_handler));
-    NRF_LOG_INFO("App timer initiated");
+  APP_ERROR_CHECK(app_timer_init());
+  APP_ERROR_CHECK(app_timer_create(&timer_id_double_click_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_double_click_timeout_handler));
+  APP_ERROR_CHECK(app_timer_create(&timer_id_en_btn_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_en_btn_timeout_handler));
+  NRF_LOG_INFO("App timer initiated");
 
-    NRF_LOG_FLUSH();
+  NRF_LOG_FLUSH();
 }
