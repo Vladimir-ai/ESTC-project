@@ -8,8 +8,10 @@
 #include "nrfx_pwm.h"
 
 /* defines common for all boards */
-#define PWM_TOP_VALUE                         255
-#define PWM_STEP                              1
+#define PWM_RGB_TOP_VALUE                     255
+#define PWM_RGB_CYCLES_FOR_ONE_STEP           100
+#define PWM_INDICATOR_TOP_VALUE               1024
+#define PWM_INDICATOR_CYCLES_FOR_ONE_STEP     2
 
 /* I think that we can add another board after that if needed */
 #ifdef BOARD_PCA10059
@@ -52,7 +54,7 @@
 
 #ifdef NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE
 #undef NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE
-#define NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE      PWM_TOP_VALUE
+#define NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE      PWM_RGB_TOP_VALUE
 #endif /* NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE */
 
 #ifdef NRFX_PWM_DEFAULT_CONFIG_LOAD_MODE
