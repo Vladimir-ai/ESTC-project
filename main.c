@@ -172,6 +172,13 @@ static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
  */
 int main(void)
 {
+  app_data.current_hsv = (hsv_params_t)
+  {
+    .hue = 0,
+    .saturation = 100,
+    .brightness = 100
+  };
+
   init_pwm();
   init_all();
 
@@ -198,6 +205,8 @@ static void init_pwm()
 {
   /* Indicator pwm init start */
   uint8_t i = 0;
+  rgb_params_t rgb;
+
   pwm_indicator_config.config = (nrfx_pwm_config_t)NRFX_PWM_DEFAULT_CONFIG;
   pwm_indicator_config.instance = (nrfx_pwm_t)NRFX_PWM_INSTANCE(1);
   pwm_indicator_config.sequence = (nrf_pwm_sequence_t)PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(
@@ -230,6 +239,13 @@ static void init_pwm()
   memcpy(&pwm_rgb_config.sequence_values,
   &pwm_indicator_config.sequence_values,
                 sizeof(nrf_pwm_values_individual_t));
+
+  rgb = color_changing_machine(&app_data.current_hsv, 0, 0);
+
+  pwm_rgb_config.sequence_values.channel_1 = rgb.red;
+  pwm_rgb_config.sequence_values.channel_2 = rgb.green;
+  pwm_rgb_config.sequence_values.channel_3 = rgb.blue;
+
 
   APP_ERROR_CHECK(nrfx_pwm_init(&pwm_rgb_config.instance,
                 &pwm_rgb_config.config, rgb_pwm_handler));
