@@ -1,29 +1,37 @@
 #include "hsv_to_rgb.h"
 #include "nrf_assert.h"
+#include <stdbool.h>
+
+static void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb);
+static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool *const count_down);
 
 /**
  * @brief Updates red, green and blue value using
  *  hue, saturation and brightness.
  *  Link to algorithm: https://stackoverflow.com/questions/24152553/hsv-to-rgb-and-back-without-floating-point-math-in-python
  *
- * @param param pointer to color params struct
+ * @param[in] hsv pointer to hsv params struct
+ * @param[out] rgb pointer to rgb params struct
  */
-static void hsv_to_rgb(color_params_t *const param)
+static void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb)
 {
+  ASSERT(hsv->hue <= 360);
+  ASSERT(hsv->brightness <= 100);
+  ASSERT(hsv->saturation <= 100);
 
-  if (param->saturation == 0)
+  if (hsv->saturation == 0)
   {
-    uint32_t brightness = COLOR_REDUCE_POW(COLOR_POW((uint32_t)param->brightness) * 255U / 100U);
-    param->red = brightness;
-    param->blue = brightness;
-    param->green = brightness;
+    uint8_t brightness = COLOR_REDUCE_POW(COLOR_POW((uint32_t)hsv->brightness) * 255U / 100U);
+    rgb->red = brightness;
+    rgb->blue = brightness;
+    rgb->green = brightness;
   }
   else
   {
     /* From 0-100, 0-360 to 0-255 */
-    uint8_t hue = COLOR_REDUCE_POW(COLOR_POW((uint32_t)param->hue) * 255 / 360);
-    uint8_t saturation = COLOR_REDUCE_POW(COLOR_POW((uint32_t)param->saturation) * 255 / 100);
-    uint8_t brightness = COLOR_REDUCE_POW(COLOR_POW((uint32_t)param->brightness) * 255 / 100);
+    uint8_t hue = COLOR_REDUCE_POW(COLOR_POW((uint32_t)hsv->hue) * 255 / 360);
+    uint8_t saturation = COLOR_REDUCE_POW(COLOR_POW((uint32_t)hsv->saturation) * 255 / 100);
+    uint8_t brightness = COLOR_REDUCE_POW(COLOR_POW((uint32_t)hsv->brightness) * 255 / 100);
 
     uint8_t region = hue / 43;
     uint8_t reminder = (hue - region * 43) * 6;
@@ -34,91 +42,105 @@ static void hsv_to_rgb(color_params_t *const param)
     switch (region)
     {
     case 0:
-      param->red = brightness;
-      param->green = t;
-      param->blue = p;
+      rgb->red = brightness;
+      rgb->green = t;
+      rgb->blue = p;
       break;
 
     case 1:
-      param->red = q;
-      param->green = brightness;
-      param->blue = p;
+      rgb->red = q;
+      rgb->green = brightness;
+      rgb->blue = p;
       break;
 
     case 2:
-      param->red = p;
-      param->green = brightness;
-      param->blue = t;
+      rgb->red = p;
+      rgb->green = brightness;
+      rgb->blue = t;
       break;
 
     case 3:
-      param->red = p;
-      param->green = q;
-      param->blue = brightness;
+      rgb->red = p;
+      rgb->green = q;
+      rgb->blue = brightness;
       break;
 
     case 4:
-      param->red = t;
-      param->green = p;
-      param->blue = brightness;
+      rgb->red = t;
+      rgb->green = p;
+      rgb->blue = brightness;
       break;
 
     default:
-      param->red = brightness;
-      param->green = p;
-      param->blue = q;
+      rgb->red = brightness;
+      rgb->green = p;
+      rgb->blue = q;
       break;
     }
   }
-
 }
 
 /**
  * @brief Function for updating counter that contains unsigned value
  *  that counts from 0 to max_value if count_down == 0 then
  *  counts from max_value to 0 if count_down == 1.
+ * Also updates count_down value.
  *
- * @param ctr Pointer to the counter that we need to change
+ * @param ctr Counter that we need to change
  * @param step Value changing step
  * @param max_value Max counter value
- * @param count_down 1 if couning down, 0 otherwise
- * @return uint8_t new count down value
+ * @param count_down 1 if couning down, 0 otherwise. Updates on overflow and underflow
+ * @return uint16_t new ctr value
  */
-__STATIC_INLINE uint8_t update_ctr(uint16_t *const ctr, uint16_t step, uint16_t max_value, uint8_t count_down)
+static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool *const count_down)
 {
-  if (count_down)
+  if (*count_down)
   {
-    if (*ctr < step)
+    if (ctr < step)
     {
-      (*ctr) += step;
-      return !count_down;
+      *count_down = 0;
+      return ctr + step;
     }
 
-    (*ctr) -= step;
+    ctr -= step;
   }
   else
   {
-    if (*ctr >= max_value - step)
+    if (ctr > max_value - step)
     {
-      *ctr -= step;
-      return !count_down;
+      *count_down = 1;
+      return ctr - step;
     }
 
-    (*ctr) += step;
+    ctr += step;
   }
 
-  return count_down;
+  return ctr;
 }
 
-void color_changing_machine(color_params_t *const params, uint16_t step, color_changing_mode_t mode)
+/**
+ * @brief This function handles logic of changing hsv color depending on
+ *  selected mode and step
+ *
+ * @param hsv HSV values
+ * @param step step to increment
+ * @param mode mode to handle
+ * @return rgb_params_t
+ */
+rgb_params_t color_changing_machine(hsv_params_t *const hsv, uint16_t step, color_changing_mode_t mode)
 {
-  /* Use ctr, because can't send bitfield pointer to func */
-  static uint16_t ctr;
+  static bool count_down_flags[MODES_COUNT]; /* 1 means that we need to start counting down to prevent overflow */
+  static rgb_params_t rgb_values =
+  {
+    .red = 0,
+    .green = 0,
+    .blue = 0
+  };
 
   ASSERT(mode < MODES_COUNT);
 
   /* Update rgb_params first */
-  hsv_to_rgb(params);
+  hsv_to_rgb(hsv, &rgb_values);
 
   switch (mode)
   {
@@ -127,24 +149,20 @@ void color_changing_machine(color_params_t *const params, uint16_t step, color_c
       break;
 
     case HUE_CHANGE:
-      ctr = params->hue;
-      params->hue_count_down_flag = update_ctr(&ctr, step, HUE_MAX_VALUE, params->hue_count_down_flag);
-      params->hue = ctr;
+      hsv->hue = update_ctr(hsv->hue, step, HUE_MAX_VALUE, &count_down_flags[mode]);
       break;
 
     case SATURATION_CHANGE:
-      ctr = params->saturation;
-      params->sat_count_down_flag = update_ctr(&ctr, step, SAT_MAX_VALUE, params->sat_count_down_flag);
-      params->saturation = ctr;
+      hsv->saturation = update_ctr(hsv->saturation, step, SAT_MAX_VALUE, &count_down_flags[mode]);
       break;
 
     case BRIGHTNESS_CHANGE:
-      ctr = params->brightness;
-      params->brightness_count_down_flag = update_ctr(&ctr, step, BRIGHT_MAX_VALUE, params->brightness_count_down_flag);
-      params->brightness = ctr;
+      hsv->brightness = update_ctr(hsv->brightness, step, BRIGHT_MAX_VALUE, &count_down_flags[mode]);
       break;
 
     default:
       break;
   }
+
+  return rgb_values;
 }

@@ -4,6 +4,7 @@
 #include "nrfx_pwm.h"
 #include "nrfx_gpiote.h"
 #include "app_timer.h"
+#include "hsv_to_rgb.h"
 
 #define GET_RGB_PWM_CONF(g_context)                 ((g_context).app_config.pwm_rgb_config)
 #define GET_INDICATOR_PWM_CONF(g_context)           ((g_context).app_config.pwm_indicator_config)
@@ -28,6 +29,7 @@ typedef struct g_app_flags_s /* contains only flags */
 typedef struct g_app_data_s
 {
   g_app_flags_t flags;
+  hsv_params_t current_hsv;
   uint8_t current_led_mode; /* current LED mode */
 } g_app_data_t;
 

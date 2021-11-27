@@ -11,32 +11,19 @@
 #define SAT_MAX_VALUE                   100
 #define BRIGHT_MAX_VALUE                100
 
-#define DEFAULT_COLOR_PARAMS              \
-{                                         \
-  .hue = 0,                               \
-  .saturation = 0,                        \
-  .brightness = 0,                        \
-  .hue_count_down_flag = 0,               \
-  .sat_count_down_flag = 0,               \
-  .brightness_count_down_flag = 0,        \
-  .red = 0,                               \
-  .green = 0,                             \
-  .blue = 0                               \
-}
-
-typedef struct color_params_s
+typedef struct rgb_params_s
 {
-  uint16_t hue:9;
-  uint16_t saturation:7;
-  uint8_t  brightness:7;
-  uint8_t  hue_count_down_flag:1;
-  uint8_t  sat_count_down_flag:1;
-  uint8_t  brightness_count_down_flag:1;
-  uint8_t  reserved_flags:6; /* I think we can use it for additional args */
-  uint8_t  red;
-  uint8_t  green;
-  uint8_t  blue;
-} color_params_t;
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
+} rgb_params_t;
+
+typedef struct hsv_params_s
+{
+  uint16_t hue;
+  uint8_t saturation;
+  uint8_t brightness;
+} hsv_params_t;
 
 typedef enum color_changing_mode_e
 {
@@ -47,6 +34,6 @@ typedef enum color_changing_mode_e
   MODES_COUNT       = 4
 } color_changing_mode_t;
 
-void color_changing_machine(color_params_t *const params, uint16_t step, color_changing_mode_t mode);
+rgb_params_t color_changing_machine(hsv_params_t *const hsv, uint16_t step, color_changing_mode_t mode);
 
 #endif /* _RGB_HSV_UTILS */

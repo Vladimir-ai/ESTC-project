@@ -18,17 +18,12 @@
 #include "hsv_to_rgb.h"
 
 /* Timer timeouts ==============================================*/
-#define BTN_DISABLE_ACTIVITY_TIMEOUT (APP_TIMER_CLOCK_FREQ / 10) /* part of sec */
+#define BTN_DISABLE_ACTIVITY_TIMEOUT (APP_TIMER_CLOCK_FREQ / 12) /* part of sec */
 #define BTN_DOUBLE_CLICK_TIMEOUT APP_TIMER_CLOCK_FREQ            /* 1 sec timeout */
 #define BTN_LONG_CLICK_TIMEOUT (APP_TIMER_CLOCK_FREQ >> 1)       /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT */
 STATIC_ASSERT(BTN_LONG_CLICK_TIMEOUT < BTN_DOUBLE_CLICK_TIMEOUT);
 
 /* Application flags ============================================*/
-#define APP_FLAG_IS_RUNNING_MASK 0x01U
-#define APP_FLAG_FST_CLICK_OCCURRED_MASK 0x02U
-#define APP_FLAG_BTN_STATE_MASK 0x04U
-#define APP_FLAG_BTN_DISABLED_MASK 0x08U
-
 #define COLOR_CHANGE_STEP 1
 
 /* static vars declaration ======================================= */
@@ -44,8 +39,6 @@ static nrfx_gpiote_in_config_t gpiote_btn_config;
 static g_app_data_t app_data;
 static uint16_t pwm_indicator_period = 0;
 
-static color_params_t current_params = DEFAULT_COLOR_PARAMS;
-
 static const uint16_t step_list[] =
 {
     0,
@@ -57,7 +50,7 @@ static const uint16_t step_list[] =
 /* static function declaration  ====================================*/
 static void logs_init(void);
 static void init_all();
-static void init_indicator_pwm();
+static void init_pwm();
 
 /* interrupt handlers ============================================== */
 static void timer_double_click_timeout_handler(void *p_context)
@@ -125,19 +118,22 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
 
 static void rgb_pwm_handler(nrfx_pwm_evt_type_t event_type)
 {
+  rgb_params_t rgb;
+
   if (event_type == NRFX_PWM_EVT_FINISHED)
   {
     if (app_data.flags.app_is_running)
     {
-      color_changing_machine(&current_params, COLOR_CHANGE_STEP, app_data.current_led_mode);
+      rgb = color_changing_machine(&app_data.current_hsv, COLOR_CHANGE_STEP, app_data.current_led_mode);
 
-      pwm_rgb_config.sequence_values.channel_1 = current_params.red;
-      pwm_rgb_config.sequence_values.channel_2 = current_params.green;
-      pwm_rgb_config.sequence_values.channel_3 = current_params.blue;
+      pwm_rgb_config.sequence_values.channel_1 = rgb.red;
+      pwm_rgb_config.sequence_values.channel_2 = rgb.green;
+      pwm_rgb_config.sequence_values.channel_3 = rgb.blue;
 
       NRF_LOG_INFO("Current values:");
-      NRF_LOG_INFO("r: %d, g: %d, b: %d", current_params.red, current_params.green, current_params.blue);
-      NRF_LOG_INFO("h: %d, s: %d, v: %d", current_params.hue, current_params.saturation, current_params.brightness);
+      NRF_LOG_INFO("h: %d, s: %d, v: %d", app_data.current_hsv.hue,
+                                      app_data.current_hsv.saturation,
+                                      app_data.current_hsv.brightness);
     }
   }
 }
@@ -176,7 +172,7 @@ static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
  */
 int main(void)
 {
-  init_indicator_pwm();
+  init_pwm();
   init_all();
 
   while (true)
@@ -198,7 +194,7 @@ static void logs_init()
   NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
-static void init_indicator_pwm()
+static void init_pwm()
 {
   /* Indicator pwm init start */
   uint8_t i = 0;
