@@ -1,6 +1,5 @@
 #include "hsv_to_rgb.h"
 #include "nrf_assert.h"
-#include <stdbool.h>
 
 static void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb);
 static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool *const count_down);
@@ -165,4 +164,22 @@ rgb_params_t color_changing_machine(hsv_params_t *const hsv, uint16_t step, colo
   }
 
   return rgb_values;
+}
+
+bool validate_hsv_by_ptr(void* ptr, uint16_t size)
+{
+  hsv_params_t *hsv = ptr;
+  if (size != sizeof(hsv_params_t))
+  {
+    return false;
+  }
+
+  if (hsv->hue > HUE_MAX_VALUE ||
+    hsv->saturation > SAT_MAX_VALUE ||
+    hsv->brightness > BRIGHT_MAX_VALUE)
+  {
+    return false;
+  }
+
+  return true;
 }

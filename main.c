@@ -16,12 +16,14 @@
 
 #include "g_context.h"
 #include "hsv_to_rgb.h"
+#include "nvmc_module.h"
+#include "nrfx_nvmc.h"
 
 /* Timer timeouts ==============================================*/
-#define BTN_DISABLE_ACTIVITY_TIMEOUT (APP_TIMER_CLOCK_FREQ / 12) /* part of sec */
-#define BTN_DOUBLE_CLICK_TIMEOUT APP_TIMER_CLOCK_FREQ            /* 1 sec timeout */
-#define BTN_LONG_CLICK_TIMEOUT (APP_TIMER_CLOCK_FREQ >> 1)       /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT */
-STATIC_ASSERT(BTN_LONG_CLICK_TIMEOUT < BTN_DOUBLE_CLICK_TIMEOUT);
+#define BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS          (APP_TIMER_CLOCK_FREQ / 12)     /* RTC timer ticks */
+#define BTN_DOUBLE_CLICK_TIMEOUT_TICKS              APP_TIMER_CLOCK_FREQ            /* 1 sec timeout */
+#define BTN_LONG_CLICK_TIMEOUT_TICKS                (APP_TIMER_CLOCK_FREQ >> 1)     /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT_TICKS */
+STATIC_ASSERT(BTN_LONG_CLICK_TIMEOUT_TICKS < BTN_DOUBLE_CLICK_TIMEOUT_TICKS);
 
 /* Application flags ============================================*/
 #define COLOR_CHANGE_STEP 1
@@ -90,13 +92,18 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
       {
         timer_start_timestamp = app_timer_cnt_get();
         app_data.flags.fst_click_occurred = 1;
-        app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT, NULL);
+        app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT_TICKS, NULL);
       }
-      else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT)
+      else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT_TICKS)
       {
         app_data.flags.fst_click_occurred = 0;
         app_data.current_led_mode = (app_data.current_led_mode + 1) % MODES_COUNT;
         pwm_indicator_period = 0;
+
+        if (!app_data.current_led_mode)
+        {
+          nvmc_write_new_record(app_data.current_hsv);
+        }
       }
     }
     else
@@ -104,7 +111,7 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
       NRF_LOG_INFO("Btn released");
 
       /* It isn't double click */
-      if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT)
+      if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT_TICKS)
       {
         app_data.flags.fst_click_occurred = 0;
       }
@@ -112,7 +119,7 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
 
     /* Always disable any actions with btn if it was enabled */
     app_data.flags.btn_is_disabled = 1;
-    app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT, NULL);
+    app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS, NULL);
   }
 }
 
@@ -172,18 +179,15 @@ static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
  */
 int main(void)
 {
-  app_data.current_hsv = (hsv_params_t)
-  {
-    .hue = 0,
-    .saturation = 100,
-    .brightness = 100
-  };
+  app_data.current_hsv = nvmc_find_last_record();
 
   init_pwm();
   init_all();
 
   while (true)
   {
+    nvmc_erase_last_written_page();
+
     __WFE();
 
     NRF_LOG_FLUSH();

@@ -43,10 +43,12 @@ SRC_FILES += \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
+	$(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_nvmc.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_pwm.c \
-  $(PROJ_DIR)/bsp_module/tutor_bsp.c \
+	$(PROJ_DIR)/bsp_module/tutor_bsp.c \
   $(PROJ_DIR)/pwm_module/pwm_module.c \
   $(PROJ_DIR)/hsv_to_rgb_module/hsv_to_rgb.c \
+  $(PROJ_DIR)/nvmc_module/nvmc_module.c \
   $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
@@ -74,6 +76,8 @@ INC_FOLDERS += \
   $(NSDK_ROOT)/components/libraries/delay \
   $(NSDK_ROOT)/components/libraries/sortlist \
   $(NSDK_ROOT)/components/libraries/strerror \
+	$(NSDK_ROOT)/components/libraries/bootloader \
+	$(NSDK_ROOT)/components/libraries/bootloader/dfu \
   $(NSDK_ROOT)/modules/nrfx/hal \
   $(NSDK_ROOT)/modules/nrfx \
   $(NSDK_ROOT)/modules/nrfx/drivers/include \
@@ -87,6 +91,7 @@ INC_FOLDERS += \
   $(PROJ_DIR)/bsp_module \
   $(PROJ_DIR)/pwm_module \
   $(PROJ_DIR)/hsv_to_rgb_module \
+	$(PROJ_DIR)/nvmc_module \
 
 # Libraries common to all targets
 LIB_FILES += \
