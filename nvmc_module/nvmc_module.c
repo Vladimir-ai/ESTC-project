@@ -9,7 +9,7 @@ static uint32_t nvmc_find_last_used_addr_on_page(uint8_t pg_idx);
 
 static uint32_t nvmc_find_last_used_addr_on_page(uint8_t pg_idx)
 {
-  ASSERT(pg_idx < 3);
+  ASSERT(pg_idx < NVMC_PAGES_CNT);
   uint32_t ret_addr = NVMC_START_APP_DATA_ADDR + pg_idx * CODE_PAGE_SIZE;
   uint32_t curr_addr;
 

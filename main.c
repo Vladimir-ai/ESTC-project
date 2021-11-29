@@ -57,46 +57,46 @@ static void init_pwm();
 /* interrupt handlers ============================================== */
 static void timer_double_click_timeout_handler(void *p_context)
 {
-  app_data.flags.fst_click_occurred = 0;
+  app_data.flags.fst_click_occurred = false;
 }
 
 static void timer_en_btn_timeout_handler(void *p_context)
 {
   /* btn value at the end of disable timeout */
-  if (app_data.flags.btn_state)
+  if (app_data.flags.btn_pressed)
   {
-    app_data.flags.app_is_running = 1;
+    app_data.flags.app_is_running = true;
   }
   else
   {
-    app_data.flags.app_is_running = 0;
+    app_data.flags.app_is_running = false;
   }
 
-  app_data.flags.btn_is_disabled = 0;
+  app_data.flags.btn_is_disabled = false;
 }
 
 static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
   static uint32_t timer_start_timestamp = 0;
 
-  /* Track btn state: 0 is released, 1 is pressed now */
-  app_data.flags.btn_state ^= 1;
+  /* Track btn state: false is released, true is pressed now */
+  app_data.flags.btn_pressed ^= true;
 
   if (!(app_data.flags.btn_is_disabled))
   {
-    if (app_data.flags.btn_state)
+    if (app_data.flags.btn_pressed)
     {
       NRF_LOG_INFO("Btn pressed");
 
       if (!(app_data.flags.fst_click_occurred))
       {
         timer_start_timestamp = app_timer_cnt_get();
-        app_data.flags.fst_click_occurred = 1;
+        app_data.flags.fst_click_occurred = true;
         app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT_TICKS, NULL);
       }
       else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT_TICKS)
       {
-        app_data.flags.fst_click_occurred = 0;
+        app_data.flags.fst_click_occurred = false;
         app_data.current_led_mode = (app_data.current_led_mode + 1) % MODES_COUNT;
         pwm_indicator_period = 0;
 
@@ -113,12 +113,12 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
       /* It isn't double click */
       if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT_TICKS)
       {
-        app_data.flags.fst_click_occurred = 0;
+        app_data.flags.fst_click_occurred = false;
       }
     }
 
     /* Always disable any actions with btn if it was enabled */
-    app_data.flags.btn_is_disabled = 1;
+    app_data.flags.btn_is_disabled = true;
     app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS, NULL);
   }
 }
@@ -214,7 +214,7 @@ static void init_pwm()
   pwm_indicator_config.config = (nrfx_pwm_config_t)NRFX_PWM_DEFAULT_CONFIG;
   pwm_indicator_config.instance = (nrfx_pwm_t)NRFX_PWM_INSTANCE(1);
   pwm_indicator_config.sequence = (nrf_pwm_sequence_t)PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(
-  pwm_indicator_config.sequence_values);
+                                  pwm_indicator_config.sequence_values);
 
   pwm_indicator_config.config.output_pins[i++] = LED_1;
   pwm_indicator_config.config.output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
