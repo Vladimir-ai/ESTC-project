@@ -43,8 +43,10 @@ SRC_FILES += \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
   $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
+  $(NSDK_ROOT)/modules/nrfx/drivers/src/nrfx_pwm.c \
   $(PROJ_DIR)/bsp_module/tutor_bsp.c \
   $(PROJ_DIR)/pwm_module/pwm_module.c \
+  $(PROJ_DIR)/hsv_to_rgb_module/hsv_to_rgb.c \
   $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
@@ -84,6 +86,7 @@ INC_FOLDERS += \
   $(PROJ_DIR) \
   $(PROJ_DIR)/bsp_module \
   $(PROJ_DIR)/pwm_module \
+  $(PROJ_DIR)/hsv_to_rgb_module \
 
 # Libraries common to all targets
 LIB_FILES += \
