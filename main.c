@@ -20,7 +20,7 @@
 #include "nrfx_nvmc.h"
 
 /* Timer timeouts ==============================================*/
-#define BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS          (APP_TIMER_CLOCK_FREQ / 12)     /* RTC timer ticks */
+#define BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS          (APP_TIMER_CLOCK_FREQ / 14)     /* RTC timer ticks */
 #define BTN_DOUBLE_CLICK_TIMEOUT_TICKS              APP_TIMER_CLOCK_FREQ            /* 1 sec timeout */
 #define BTN_LONG_CLICK_TIMEOUT_TICKS                (APP_TIMER_CLOCK_FREQ >> 1)     /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT_TICKS */
 STATIC_ASSERT(BTN_LONG_CLICK_TIMEOUT_TICKS < BTN_DOUBLE_CLICK_TIMEOUT_TICKS);

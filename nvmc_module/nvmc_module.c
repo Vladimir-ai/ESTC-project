@@ -6,9 +6,9 @@ static bool last_pg_is_erased = true;
 static uint8_t erased_pg_idx = 0;
 
 static uint32_t nvmc_find_last_used_addr(void);
-static uint32_t nvmc_find_last_used_addr_on_page(uint8_t pg_idx);
+static uint32_t nvmc_find_free_addr_on_page(uint8_t pg_idx);
 
-static uint32_t nvmc_find_last_used_addr_on_page(uint8_t pg_idx)
+static uint32_t nvmc_find_free_addr_on_page(uint8_t pg_idx)
 {
   const uint32_t max_page_addr = NVMC_START_APP_DATA_ADDR + (pg_idx + 1) * CODE_PAGE_SIZE;
   uint32_t ret_addr = NVMC_START_APP_DATA_ADDR + pg_idx * CODE_PAGE_SIZE;
@@ -21,19 +21,20 @@ static uint32_t nvmc_find_last_used_addr_on_page(uint8_t pg_idx)
   {
     /* Erase page if it hasn't preambule (dirty) */
     nrfx_nvmc_page_erase(ret_addr);
+  }
+
+  /* If page is clean */
+  if (*(uint32_t*)ret_addr == 0xFFFFFFFF)
+  {
     nrfx_nvmc_word_write(ret_addr, NVMC_PAGE_PREAMBULE);
   }
 
-  ret_addr += NVMC_PAGE_PREAMBULE_SIZE;
 
-  for(curr_addr = ret_addr; curr_addr + NVMC_STUCT_SIZE < max_page_addr; curr_addr += NVMC_STUCT_SIZE)
+  for(curr_addr = ret_addr + NVMC_PAGE_PREAMBULE_SIZE; curr_addr + NVMC_STUCT_SIZE <= max_page_addr; curr_addr += NVMC_STUCT_SIZE)
   {
-    if (validate_hsv_by_ptr((void*) (curr_addr + NVMC_PAGE_PREAMBULE_SIZE), NVMC_STUCT_SIZE))
+    if (!validate_hsv_by_ptr((void*) (curr_addr), NVMC_STUCT_SIZE))
     {
       ret_addr = curr_addr;
-    }
-    else
-    {
       break;
     }
   }
@@ -49,12 +50,15 @@ static uint32_t nvmc_find_last_used_addr(void)
 
   for (page_idx = 0; page_idx < NVMC_PAGES_CNT; page_idx++)
   {
-    curr_addr = nvmc_find_last_used_addr_on_page(page_idx);
+    curr_addr = nvmc_find_free_addr_on_page(page_idx);
 
-    /* This page currently in use */
-    if (validate_hsv_by_ptr((void*) curr_addr, NVMC_STUCT_SIZE))
+    if (curr_addr % CODE_PAGE_SIZE == 0)
     {
       ret_addr = curr_addr;
+    }
+    else if (curr_addr > NVMC_PAGE_PREAMBULE_SIZE + NVMC_START_APP_DATA_ADDR)
+    {
+      ret_addr = curr_addr - NVMC_STUCT_SIZE;
     }
   }
 
@@ -91,7 +95,7 @@ void nvmc_write_new_record(hsv_params_t curr_params)
       nrfx_nvmc_page_partial_erase_init((addr / CODE_PAGE_SIZE) * CODE_PAGE_SIZE,
                                         NVMC_ERASE_DURATION_MS);
     }
-    else /* we have only one page, need to clear sync */
+    else /* We have only one page, need to clear page synchronously */
     {
       nrfx_nvmc_page_erase(0);
     }
