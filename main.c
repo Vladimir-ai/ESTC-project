@@ -12,7 +12,7 @@
 #include "app_usbd.h"
 #include "app_usbd_serial_num.h"
 
-#include "pwm_config.h"
+#include "pwm_module.h"
 
 #include "g_context.h"
 #include "hsv_to_rgb.h"
@@ -25,34 +25,18 @@
 #define BTN_LONG_CLICK_TIMEOUT_TICKS                (APP_TIMER_CLOCK_FREQ >> 1)     /* MUST be less than BTN_DOUBLE_CLICK_TIMEOUT_TICKS */
 STATIC_ASSERT(BTN_LONG_CLICK_TIMEOUT_TICKS < BTN_DOUBLE_CLICK_TIMEOUT_TICKS);
 
-/* Application flags ============================================*/
-#define COLOR_CHANGE_STEP 1
-
 /* static vars declaration ======================================= */
 /* timer config */
 APP_TIMER_DEF(timer_id_double_click_timeout);
 APP_TIMER_DEF(timer_id_en_btn_timeout);
-/*pwm config */
-static g_pwm_config_t pwm_rgb_config;
-static g_pwm_config_t pwm_indicator_config;
 /* btn config */
 static nrfx_gpiote_in_config_t gpiote_btn_config;
 /* app data */
-static g_app_data_t app_data;
-static uint16_t pwm_indicator_period = 0;
-
-static const uint16_t step_list[] =
-{
-    0,
-    16,
-    64,
-    PWM_INDICATOR_TOP_VALUE
-};
+g_app_data_t app_data;
 
 /* static function declaration  ====================================*/
 static void logs_init(void);
 static void init_all();
-static void init_pwm();
 
 /* interrupt handlers ============================================== */
 static void timer_double_click_timeout_handler(void *p_context)
@@ -98,7 +82,7 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
       {
         app_data.flags.fst_click_occurred = false;
         app_data.current_led_mode = (app_data.current_led_mode + 1) % MODES_COUNT;
-        pwm_indicator_period = 0;
+        reset_indicator_led();
 
         if (!app_data.current_led_mode)
         {
@@ -120,54 +104,6 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
     /* Always disable any actions with btn if it was enabled */
     app_data.flags.btn_is_disabled = true;
     app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS, NULL);
-  }
-}
-
-static void rgb_pwm_handler(nrfx_pwm_evt_type_t event_type)
-{
-  rgb_params_t rgb;
-
-  if (event_type == NRFX_PWM_EVT_FINISHED)
-  {
-    if (app_data.flags.app_is_running)
-    {
-      rgb = color_changing_machine(&app_data.current_hsv, COLOR_CHANGE_STEP, app_data.current_led_mode);
-
-      pwm_rgb_config.sequence_values.channel_1 = rgb.red;
-      pwm_rgb_config.sequence_values.channel_2 = rgb.green;
-      pwm_rgb_config.sequence_values.channel_3 = rgb.blue;
-
-      NRF_LOG_INFO("Current values:");
-      NRF_LOG_INFO("h: %d, s: %d, v: %d", app_data.current_hsv.hue,
-                                      app_data.current_hsv.saturation,
-                                      app_data.current_hsv.brightness);
-    }
-  }
-}
-
-static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
-{
-  if (event_type == NRFX_PWM_EVT_FINISHED)
-  {
-    /* LED is always on */
-    if (step_list[app_data.current_led_mode] >= PWM_INDICATOR_TOP_VALUE)
-    {
-      pwm_indicator_config.sequence_values.channel_0 = PWM_INDICATOR_TOP_VALUE;
-    }
-    else
-    {
-      /* handle overflow */
-      if (pwm_indicator_period >= 2U * PWM_INDICATOR_TOP_VALUE)
-      {
-        pwm_indicator_period = 0;
-      }
-
-      pwm_indicator_config.sequence_values.channel_0 = pwm_indicator_period > PWM_INDICATOR_TOP_VALUE
-                                                    ? 2U * PWM_INDICATOR_TOP_VALUE - pwm_indicator_period
-                                                    : pwm_indicator_period;
-
-      pwm_indicator_period += step_list[app_data.current_led_mode];
-    }
   }
 }
 
@@ -203,60 +139,6 @@ static void logs_init()
   APP_ERROR_CHECK(ret);
 
   NRF_LOG_DEFAULT_BACKENDS_INIT();
-}
-
-static void init_pwm()
-{
-  /* Indicator pwm init start */
-  uint8_t i = 0;
-  rgb_params_t rgb;
-
-  pwm_indicator_config.config = (nrfx_pwm_config_t)NRFX_PWM_DEFAULT_CONFIG;
-  pwm_indicator_config.instance = (nrfx_pwm_t)NRFX_PWM_INSTANCE(1);
-  pwm_indicator_config.sequence = (nrf_pwm_sequence_t)PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(
-                                  pwm_indicator_config.sequence_values);
-
-  pwm_indicator_config.config.output_pins[i++] = LED_1;
-  pwm_indicator_config.config.output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
-  pwm_indicator_config.config.output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
-  pwm_indicator_config.config.output_pins[i++] = NRFX_PWM_PIN_NOT_USED;
-  pwm_indicator_config.config.top_value = PWM_INDICATOR_TOP_VALUE;
-
-  pwm_indicator_config.sequence_values.channel_0 = 0;
-  pwm_indicator_config.sequence_values.channel_1 = 0;
-  pwm_indicator_config.sequence_values.channel_2 = 0;
-  pwm_indicator_config.sequence_values.channel_3 = 0;
-
-  APP_ERROR_CHECK(nrfx_pwm_init(&pwm_indicator_config.instance,
-          &pwm_indicator_config.config, indicator_pwm_handler));
-  NRF_LOG_INFO("Indicator PWM Initiated");
-  /* Indicator pwm init end */
-
-  /* RGB pwm init start */
-  pwm_rgb_config.config = (nrfx_pwm_config_t)NRFX_PWM_DEFAULT_CONFIG;
-  pwm_rgb_config.instance = (nrfx_pwm_t)NRFX_PWM_INSTANCE(0);
-  pwm_rgb_config.sequence = (nrf_pwm_sequence_t)PWM_INDIVIDUAL_SEQ_DEFAULT_CONFIG(
-        pwm_rgb_config.sequence_values);
-
-  pwm_rgb_config.config.output_pins[0] = NRFX_PWM_PIN_NOT_USED;
-
-  memcpy(&pwm_rgb_config.sequence_values,
-  &pwm_indicator_config.sequence_values,
-                sizeof(nrf_pwm_values_individual_t));
-
-  rgb = color_changing_machine(&app_data.current_hsv, 0, 0);
-
-  pwm_rgb_config.sequence_values.channel_1 = rgb.red;
-  pwm_rgb_config.sequence_values.channel_2 = rgb.green;
-  pwm_rgb_config.sequence_values.channel_3 = rgb.blue;
-
-
-  APP_ERROR_CHECK(nrfx_pwm_init(&pwm_rgb_config.instance,
-                &pwm_rgb_config.config, rgb_pwm_handler));
-  NRF_LOG_INFO("LED PWM Initiated");
-  /* RGB pwm init end */
-
-  NRF_LOG_FLUSH();
 }
 
 static void init_all()
@@ -295,12 +177,4 @@ static void init_all()
   NRF_LOG_INFO("App timer initiated");
 
   NRF_LOG_FLUSH();
-
-  nrfx_pwm_simple_playback(&pwm_rgb_config.instance,
-                            &pwm_rgb_config.sequence,
-                            PWM_RGB_CYCLES_FOR_ONE_STEP, NRFX_PWM_FLAG_LOOP);
-
-  nrfx_pwm_simple_playback(&pwm_indicator_config.instance,
-                            &pwm_indicator_config.sequence,
-                            PWM_INDICATOR_CYCLES_FOR_ONE_STEP, NRFX_PWM_FLAG_LOOP);
 }
