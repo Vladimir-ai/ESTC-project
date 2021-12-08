@@ -7,11 +7,37 @@ static uint8_t erased_pg_idx = 0;
 
 static uint32_t nvmc_find_last_used_addr(void);
 static uint32_t nvmc_find_free_addr_on_page(uint8_t pg_idx);
+static uint8_t get_abs_page_idx(uint32_t address);
+static uint32_t get_page_offset(uint8_t page_idx);
+
+/**
+ * @brief Get the absolute index of page
+ *
+ * @param address
+ * @return uint8_t
+ */
+static uint8_t get_abs_page_idx(uint32_t address)
+{
+  ASSERT(address < NVMC_END_APP_DATA_ADDR);
+  return address / CODE_PAGE_SIZE;
+}
+
+/**
+ * @brief Get the page offset from NVMC_START_APP_DATA_ADDR
+ *
+ * @param page_idx
+ * @return uint32_t
+ */
+static uint32_t get_page_offset(uint8_t page_idx)
+{
+  ASSERT(page_idx < NVMC_PAGES_CNT);
+  return page_idx * CODE_PAGE_SIZE;
+}
 
 static uint32_t nvmc_find_free_addr_on_page(uint8_t pg_idx)
 {
-  const uint32_t max_page_addr = NVMC_START_APP_DATA_ADDR + (pg_idx + 1) * CODE_PAGE_SIZE;
-  uint32_t ret_addr = NVMC_START_APP_DATA_ADDR + pg_idx * CODE_PAGE_SIZE;
+  const uint32_t max_page_addr = NVMC_START_APP_DATA_ADDR + get_page_offset(pg_idx + 1);
+  uint32_t ret_addr = NVMC_START_APP_DATA_ADDR + get_page_offset(pg_idx);
   uint32_t curr_addr;
 
   ASSERT(pg_idx < NVMC_PAGES_CNT);
@@ -84,15 +110,15 @@ void nvmc_write_new_record(hsv_params_t curr_params)
   uint32_t addr;
   addr = (uint32_t)nvmc_find_last_used_addr();
 
-  if (((addr + NVMC_STUCT_SIZE) / CODE_PAGE_SIZE) > (addr / CODE_PAGE_SIZE))
+  if (get_abs_page_idx(addr + NVMC_STUCT_SIZE) > get_abs_page_idx(addr))
   {
 
     if (NVMC_PAGES_CNT > 1)
     {
       /* If page was switched, then initiate partial erase */
       last_pg_is_erased = false;
-      erased_pg_idx = ((addr - NVMC_START_APP_DATA_ADDR) / CODE_PAGE_SIZE);
-      nrfx_nvmc_page_partial_erase_init((addr / CODE_PAGE_SIZE) * CODE_PAGE_SIZE,
+      erased_pg_idx = get_abs_page_idx(addr);
+      nrfx_nvmc_page_partial_erase_init(get_abs_page_idx(addr) * CODE_PAGE_SIZE,
                                         NVMC_ERASE_DURATION_MS);
     }
     else /* We have only one page, need to clear page synchronously */
@@ -110,6 +136,13 @@ void nvmc_write_new_record(hsv_params_t curr_params)
   last_write_is_ok = false; // let's check it on next Interrupt
 }
 
+/**
+ * @brief You should call this function multiple times
+ *  to erase page at all.
+ *
+ *  Number of calls to erase page: 85 / NVMC_ERASE_DURATION_MS
+ *
+ */
 void nvmc_erase_last_written_page(void)
 {
   if(!last_write_is_ok)
@@ -117,6 +150,7 @@ void nvmc_erase_last_written_page(void)
     last_write_is_ok = nrfx_nvmc_write_done_check();
   }
 
+  /* page is erased only AFTER successful writing */
   if (last_write_is_ok &&
       !last_pg_is_erased &&
       nrfx_nvmc_page_partial_erase_continue())

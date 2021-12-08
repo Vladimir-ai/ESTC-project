@@ -14,13 +14,7 @@
 #define NVMC_ERASE_DURATION_MS              1
 
 #else /* BOARD_PCA10059 */
-
-#define NVMC_START_APP_DATA_ADDR            0
-#define NVMC_END_APP_DATA_ADDR              0
-#define NVMC_PAGES_CNT                      2
-
-#define NVMC_ERASE_DURATION_MS              1
-
+#error "Current board isn't supported"
 
 #endif /* BOARD_PCA10059 */
 

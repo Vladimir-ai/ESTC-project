@@ -174,12 +174,7 @@ bool validate_hsv_by_ptr(void* ptr, uint16_t size)
     return false;
   }
 
-  if (hsv->hue > HUE_MAX_VALUE ||
-    hsv->saturation > SAT_MAX_VALUE ||
-    hsv->brightness > BRIGHT_MAX_VALUE)
-  {
-    return false;
-  }
-
-  return true;
+  return (hsv->hue <= HUE_MAX_VALUE &&
+    hsv->saturation <= SAT_MAX_VALUE &&
+    hsv->brightness <= BRIGHT_MAX_VALUE);
 }
