@@ -11,6 +11,8 @@
 #define SAT_MAX_VALUE                   100
 #define BRIGHT_MAX_VALUE                100
 
+#define RGB_MAX_VALUE                   255
+
 #define HSV_STRUCT_DEFAULT_VALUE        \
 {                                       \
   .hue = 0,                             \
@@ -44,5 +46,6 @@ typedef enum color_changing_mode_e
 rgb_params_t color_changing_machine(hsv_params_t *const hsv, uint16_t step, color_changing_mode_t mode);
 
 bool validate_hsv_by_ptr(void* ptr, uint16_t size);
+hsv_params_t hsv_by_rgb(const rgb_params_t rgb, bool reset_count_down);
 
 #endif /* _RGB_HSV_UTILS */
