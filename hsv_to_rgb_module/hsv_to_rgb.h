@@ -1,7 +1,7 @@
 #ifndef _RGB_HSV_UTILS
 #define _RGB_HSV_UTILS
 
-#include <stdint.h>
+#include <nrfx.h>
 
 #define COLOR_POWER                     10      //must be greater than 0 less than 10 cus using 32 bit for calculations
 #define COLOR_POW(color)                ((uint32_t)(color) << COLOR_POWER)
@@ -10,6 +10,13 @@
 #define HUE_MAX_VALUE                   360
 #define SAT_MAX_VALUE                   100
 #define BRIGHT_MAX_VALUE                100
+
+#define HSV_STRUCT_DEFAULT_VALUE        \
+{                                       \
+  .hue = 0,                             \
+  .saturation = 100,                    \
+  .brightness = 100                          \
+}                                       \
 
 typedef struct rgb_params_s
 {
@@ -35,5 +42,7 @@ typedef enum color_changing_mode_e
 } color_changing_mode_t;
 
 rgb_params_t color_changing_machine(hsv_params_t *const hsv, uint16_t step, color_changing_mode_t mode);
+
+bool validate_hsv_by_ptr(void* ptr, uint16_t size);
 
 #endif /* _RGB_HSV_UTILS */

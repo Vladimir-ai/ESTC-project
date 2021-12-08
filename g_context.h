@@ -20,10 +20,10 @@ typedef struct g_pwm_config_s
 
 typedef struct g_app_flags_s /* contains only flags */
 {
-  bool app_is_running;        /* 1 if application should change value depending on mode, else 0 */
-  bool fst_click_occurred;    /* 1 if first click was occurred */
-  bool btn_state;             /* 0 if released, 1 if pressed now */
-  bool btn_is_disabled;       /* 1 if btn won't do anything except @ref btn_state changing, else 0 */
+  bool app_is_running;        /* true if application should change value depending on mode, else false */
+  bool fst_click_occurred;    /* true if first click was occurred */
+  bool btn_pressed;           /* false if released, true if pressed now */
+  bool btn_is_disabled;       /* true if btn won't do anything except @ref btn_state changing, else false */
 } g_app_flags_t;
 
 typedef struct g_app_data_s
