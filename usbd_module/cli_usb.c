@@ -131,6 +131,8 @@ void process_input_string(char *input_str, uint8_t input_str_len, msg_hadler_t m
         result_buf.rgb.blue = (uint8_t) numeric_args[2];
 
         NRF_LOG_INFO("RGB Cmd: %d, %d, %d", numeric_args[0], numeric_args[1], numeric_args[2]);
+        msg_handler("Color changed to rgb: red %hu, green %hu, blue %hu",
+                   result_buf.rgb.red, result_buf.rgb.green, result_buf.rgb.blue);
 
         g_app_data.current_hsv = hsv_by_rgb(result_buf.rgb, 1);
         pwm_force_update_handler();
@@ -160,7 +162,10 @@ void process_input_string(char *input_str, uint8_t input_str_len, msg_hadler_t m
         result_buf.hsv.saturation = (uint8_t) numeric_args[1];
         result_buf.hsv.brightness = (uint8_t) numeric_args[2];
 
+        msg_handler("Color changed to hsv: hue %hu, sat %hu, bright %hu",
+                   numeric_args[0], numeric_args[1], numeric_args[2]);
         NRF_LOG_INFO("HSV Cmd: %d, %d, %d", numeric_args[0], numeric_args[1], numeric_args[2]);
+
 
         g_app_data.current_hsv = result_buf.hsv;
         pwm_force_update_handler();
@@ -178,6 +183,7 @@ void process_input_string(char *input_str, uint8_t input_str_len, msg_hadler_t m
   else if (cmd == SAVE_CMD)
   {
     nvmc_write_handler(g_app_data.current_hsv);
+    msg_handler("Current state saved");
   }
   else if (cmd == HELP_CMD)
   {
