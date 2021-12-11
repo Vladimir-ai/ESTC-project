@@ -1,40 +1,24 @@
 #include "nrf_log.h"
 #include "cli_usb.h"
 #include "g_context.h"
+#include <ctype.h>
 
 static console_output_t result_buf;
 static update_pwm_handler_t pwm_force_update_handler;
 static nvmc_handler_t nvmc_write_handler;
 
-static bool symbol_is_str_separator(char symbol)
-{
-  return symbol == 0 ||
-         symbol == '\n' ||
-         symbol == '\r' ||
-         symbol == ' ';
-}
-
-static uint8_t get_cmd_name_size(uint8_t cmd_idx)
-{
-  uint8_t char_idx;
-
-  for (char_idx = 0; cmd_list[cmd_idx][char_idx] != 0 && char_idx < MAX_CMD_NAME_LEN; char_idx++);
-
-  return char_idx;
-}
-
-static cmd_t get_cmd_from_args(char *args, uint8_t args_size)
+static cmd_t get_cmd_from_args(const char *args, uint8_t args_size)
 {
   cmd_t ret = NO_CMD;
   uint8_t cmd_size, cmd_idx;
 
   for (cmd_idx = 0; cmd_idx < NO_CMD; cmd_idx++)
   {
-    cmd_size = get_cmd_name_size(cmd_idx);
+    cmd_size = strlen(cmd_list[cmd_idx]);
 
     if (args_size >= cmd_size &&
         !strncmp(args, cmd_list[cmd_idx], cmd_size) &&
-        symbol_is_str_separator(args[cmd_size]))
+        (isspace((uint8_t)args[cmd_size]) || args[cmd_size] == 0))
     {
       ret = cmd_idx;
       break;
@@ -44,23 +28,24 @@ static cmd_t get_cmd_from_args(char *args, uint8_t args_size)
   return ret;
 }
 
-static char* find_next_arg(char* args, uint8_t input_str_len)
+static const char* find_next_arg(const char* args, uint8_t input_str_len)
 {
-  char* ret = NULL;
+  const char* ret = NULL;
   uint8_t offset = 0;
   ASSERT(args != NULL);
 
-  for (offset = 0; offset < input_str_len; offset++)
-  {
-    if (symbol_is_str_separator(args[offset]) && offset == 0)
-    {
-      break;
-    }
 
-    if (symbol_is_str_separator(args[offset]))
+  if (!isspace((uint8_t)args[offset]))
+  {
+
+    for (offset = 0; offset < input_str_len; offset++)
     {
-      ret = &args[offset + 1];
-      break;
+
+      if (isspace((uint8_t)args[offset]))
+      {
+        ret = &args[offset + 1];
+        break;
+      }
     }
   }
 
@@ -69,55 +54,46 @@ static char* find_next_arg(char* args, uint8_t input_str_len)
 
 /**
  * @brief Given args and result arrays returns args_count numbers from args str.
- *
- * @param args arguments to
- * @param result
- * @param args_count
- * @return true
- * @return false
  */
-static bool read_numeric_args(char *args, uint8_t input_str_len, uint16_t *result, uint8_t args_count)
+static bool read_numeric_args(const char *args, uint8_t input_str_len, uint16_t *result, uint8_t args_count)
 {
   uint16_t value;
-  char *current_args = args;
-  bool ret = true;
+  const char *current_args = args;
+  const size_t args_end = (size_t)args + input_str_len;
 
   for(uint8_t arg_idx = 0; arg_idx < args_count; arg_idx++)
   {
     if (current_args == NULL)
     {
-      ret = false;
-      break;
+      return false;
     }
 
     if(sscanf(current_args, "%hu", &value) == EOF)
     {
-      ret = false;
-      break;
+      return false;
     }
 
-
-    current_args = find_next_arg(current_args, input_str_len - (current_args - args));
+    current_args = find_next_arg(current_args, args_end - (size_t)current_args);
     result[arg_idx] = value;
   }
 
-  return ret;
+  return true;
 }
 
-void process_input_string(char *input_str, uint8_t input_str_len, msg_hadler_t msg_handler)
+void process_input_string(const char *input_str, uint8_t input_str_len, msg_hadler_t msg_handler)
 {
   cmd_t cmd = get_cmd_from_args(input_str, input_str_len);
-  char *args_pointer = find_next_arg(input_str, input_str_len - cmd_arg_size[cmd]);
+  const char *args_pointer = find_next_arg(input_str, input_str_len - cmd_arg_size[cmd]);
   uint8_t args_len = 0;
 
   if (args_pointer != NULL)
   {
-    args_len = input_str_len - (args_pointer - input_str);
+    args_len = input_str_len - (args_pointer - args_pointer);
   }
 
   if (cmd == RGB_CMD)
   {
-    uint16_t numeric_args[3];
+    uint16_t numeric_args[cmd_arg_size[cmd]];
     memset(numeric_args, 0, sizeof(numeric_args));
 
     if (read_numeric_args(args_pointer, args_len, numeric_args, 3))
@@ -149,7 +125,7 @@ void process_input_string(char *input_str, uint8_t input_str_len, msg_hadler_t m
   }
   else if (cmd == HSV_CMD)
   {
-    uint16_t numeric_args[3];
+    uint16_t numeric_args[cmd_arg_size[cmd]];
     memset(numeric_args, 0, sizeof(numeric_args));
 
     if (read_numeric_args(args_pointer, args_len, numeric_args, 3))

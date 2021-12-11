@@ -5,6 +5,7 @@
 #include "cli_usb.h"
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 static void usb_ev_handler(app_usbd_class_inst_t const * p_inst,
                            app_usbd_cdc_acm_user_event_t event);
@@ -38,7 +39,7 @@ static void print_msg(char* msg,...)
 
   va_end(args);
 
-  for(msg_length = 0; msg_length < MAX_OUTPUT_STR_SIZE && output_str[msg_length] != 0; msg_length++);
+  msg_length = strlen(output_str);
 
   if (output_str[msg_length] != '\n')
   {
@@ -50,14 +51,6 @@ static void print_msg(char* msg,...)
 
   memset(output_str, 0, msg_length);
   NRF_LOG_INFO("Message sent");
-}
-
-static bool is_symbol_supported(char symbol)
-{
-  return (symbol >= 'a' && symbol <= 'z') ||
-         (symbol >= 'A' && symbol <= 'Z') ||
-         (symbol >= '0' && symbol <= '9') ||
-         (symbol == ' ' || symbol == '_');
 }
 
 static void clear_input(void)
@@ -76,7 +69,7 @@ static reading_status_t add_symbol_to_string(char symbol)
   }
 
   /* Skip all not supported symbols at the start of string*/
-  if (!is_symbol_supported(symbol) && !symbol_idx)
+  if (!isprint(symbol) && !symbol_idx)
   {
     return READING_OK;
   }
@@ -85,7 +78,7 @@ static reading_status_t add_symbol_to_string(char symbol)
   {
     ret = READING_ERR_STR_TOO_LONG;
   }
-  else if(is_symbol_supported(symbol))
+  else if(isprint(symbol) || symbol == ' ')
   {
     input_str[symbol_idx++] = symbol;
     ret = READING_OK;

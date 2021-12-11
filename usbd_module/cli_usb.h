@@ -34,7 +34,7 @@ typedef void (*update_pwm_handler_t)(void);
 typedef void (*msg_hadler_t)(char* msg,...);
 typedef void (*nvmc_handler_t)(hsv_params_t hsv_params);
 
-void process_input_string(char *input_str, uint8_t input_str_size, msg_hadler_t msg_handler);
+void process_input_string(const char *input_str, uint8_t input_str_size, msg_hadler_t msg_handler);
 void init_cli(update_pwm_handler_t pwm_force_update, nvmc_handler_t nvmc_handler);
 
 #endif /* _CLI_USB_H */

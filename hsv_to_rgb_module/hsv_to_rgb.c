@@ -2,7 +2,7 @@
 #include "nrf_assert.h"
 #include <string.h>
 
-static bool count_down_flags[MODES_COUNT]; /* 1 means that we need to start counting down to prevent overflow */
+static bool count_down_flags[MODES_COUNT]; /* true means that we need to start counting down to prevent overflow */
 
 static void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb);
 static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool *const count_down);
@@ -196,8 +196,6 @@ hsv_params_t hsv_by_rgb(const rgb_params_t rgb, bool reset_count_down)
 
   uint8_t rgb_max = MAX(rgb.red, MAX(rgb.green, rgb.blue));
   uint8_t rgb_min = MIN(rgb.red, MIN(rgb.green, rgb.blue));
-
-  (void)memset(&hsv, 0, sizeof(hsv_params_t));
 
   if (reset_count_down)
   {
