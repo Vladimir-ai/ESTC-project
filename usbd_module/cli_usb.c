@@ -110,7 +110,7 @@ void process_input_string(const char *input_str, uint8_t input_str_len, msg_hadl
         msg_handler("Color changed to rgb: red %hu, green %hu, blue %hu",
                    result_buf.rgb.red, result_buf.rgb.green, result_buf.rgb.blue);
 
-        g_app_data.current_hsv = hsv_by_rgb(result_buf.rgb, 1);
+        g_app_data.current_hsv = hsv_by_rgb(result_buf.rgb);
         pwm_force_update_handler();
       }
       else

@@ -187,20 +187,14 @@ bool validate_hsv_by_ptr(void* ptr, uint16_t size)
  *  Link to algorithm: https://stackoverflow.com/questions/24152553/hsv-to-rgb-and-back-without-floating-point-math-in-python
  *
  * @param[in] rgb pointer to rgb params struct
- * @param reset_count_down resets count down array (it's needed for determining current count direction)
  * @returns hsv params struct equal to rgb
  */
-hsv_params_t hsv_by_rgb(const rgb_params_t rgb, bool reset_count_down)
+hsv_params_t hsv_by_rgb(const rgb_params_t rgb)
 {
   hsv_params_t hsv;
 
   uint8_t rgb_max = MAX(rgb.red, MAX(rgb.green, rgb.blue));
   uint8_t rgb_min = MIN(rgb.red, MIN(rgb.green, rgb.blue));
-
-  if (reset_count_down)
-  {
-    (void)memset(count_down_flags, 0, sizeof(count_down_flags));
-  }
 
   hsv.brightness = rgb_max;
   hsv.brightness = COLOR_REDUCE_POW(COLOR_POW(hsv.brightness) * BRIGHT_MAX_VALUE / 255); /* from [0; 255] to [0; 100] */
