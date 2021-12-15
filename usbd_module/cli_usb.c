@@ -96,7 +96,7 @@ void process_input_string(const char *input_str, uint8_t input_str_len, msg_hadl
     uint16_t numeric_args[cmd_arg_size[cmd]];
     memset(numeric_args, 0, sizeof(numeric_args));
 
-    if (read_numeric_args(args_pointer, args_len, numeric_args, 3))
+    if (read_numeric_args(args_pointer, args_len, numeric_args, cmd_arg_size[cmd]))
     {
       if (numeric_args[0] <= RGB_MAX_VALUE &&
           numeric_args[1] <= RGB_MAX_VALUE &&
@@ -128,7 +128,7 @@ void process_input_string(const char *input_str, uint8_t input_str_len, msg_hadl
     uint16_t numeric_args[cmd_arg_size[cmd]];
     memset(numeric_args, 0, sizeof(numeric_args));
 
-    if (read_numeric_args(args_pointer, args_len, numeric_args, 3))
+    if (read_numeric_args(args_pointer, args_len, numeric_args, cmd_arg_size[cmd]))
     {
       if (numeric_args[0] <= HUE_MAX_VALUE &&
           numeric_args[1] <= SAT_MAX_VALUE &&
