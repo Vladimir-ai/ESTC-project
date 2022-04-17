@@ -47,8 +47,6 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service)
   error_code = sd_ble_uuid_vs_add(&base_uuid, &ble_uuid.type);
   VERIFY_SUCCESS(error_code);
 
-  ble_uuid.uuid = ESTC_SERVICE_UUID;
-
   error_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &service->service_handle);
 
   return error_code;
