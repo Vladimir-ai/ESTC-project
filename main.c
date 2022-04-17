@@ -101,6 +101,9 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
+#define UUID_16BIT_COUNT                2
+#define UUID_128BIT_COUNT               1
+
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
@@ -109,8 +112,9 @@ static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        
 
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
 {
-    {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
-    // TODO: 5. Add ESTC service UUID to the table
+  {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
+  {ESTC_SERVICE_UUID, BLE_UUID_TYPE_BLE},
+  {ESTC_SERVICE_UUID, BLE_UUID_TYPE_VENDOR_BEGIN}
 };
 
 ble_estc_service_t m_estc_service; /**< ESTC example BLE service */
@@ -458,8 +462,7 @@ static void advertising_init(void)
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
     init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
-    // TODO: 6. Consider moving the device characteristics to the Scan Response if necessary
-    init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    init.advdata.uuids_complete.uuid_cnt = UUID_16BIT_COUNT * sizeof(m_adv_uuids[0]) / sizeof(m_adv_uuids[0]);
     init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
 
     init.config.ble_adv_fast_enabled  = true;
@@ -467,6 +470,9 @@ static void advertising_init(void)
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
 
     init.evt_handler = on_adv_evt;
+
+    init.srdata.uuids_complete.uuid_cnt = UUID_128BIT_COUNT * sizeof(m_adv_uuids[UUID_16BIT_COUNT]) / sizeof(m_adv_uuids[UUID_16BIT_COUNT]);
+    init.srdata.uuids_complete.p_uuids  = &m_adv_uuids[UUID_16BIT_COUNT];
 
     err_code = ble_advertising_init(&m_advertising, &init);
     APP_ERROR_CHECK(err_code);
