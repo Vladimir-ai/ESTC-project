@@ -3,7 +3,7 @@ TARGETS          := nrf52840_xxaa
 OUTPUT_DIRECTORY := _build
 DFU_PORT         ?= /dev/ttyACM0
 
-SDK_ROOT := ../../../../../..
+SDK_ROOT ?= ../../../../ESTC-NSDK
 PROJ_DIR := ../../..
 
 $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
