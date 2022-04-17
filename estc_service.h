@@ -37,19 +37,23 @@
 #include "sdk_errors.h"
 
 /* 7c8b7394-be9e-4ae9-a6b5-afff63f4f815 */
-#define ESTC_BASE_UUID  { 0x15, 0xF8, 0xF4, 0x63, 0xFF, 0xAF, /* - */ 0xB5, 0xA6, /* - */ 0xE9, 0x4A, /* -  */ 0x9E, 0xBE, /* - */ 0x73, 0x94, 0x8B, 0x7C }
+#define ESTC_BASE_UUID        { 0x15, 0xF8, 0xF4, 0x63, 0xFF, 0xAF, /* - */ 0xB5, 0xA6, /* - */ 0xE9, 0x4A, /* -  */ 0x9E, 0xBE, /* - */ 0x73, 0x94, 0x8B, 0x7C }
 /* Use 7394 as UUID */
-#define ESTC_SERVICE_UUID 0x7394
+#define ESTC_SERVICE_UUID      0x7394
 
-// TODO: 3. Pick a characteristic UUID and define it:
-// #define ESTC_GATT_CHAR_1_UUID 0x0001
+#define ESTC_GATT_CHAR_1_UUID  0x1234
+#define ESTC_GATT_CHAR_2_UUID  0x1122
+
+#define ESTC_USER_CHAR_1_DESCR "Random user description"
+#define ESTC_USER_CHAR_2_DESCR "Another characteristic"
+
 
 typedef struct
 {
     uint16_t service_handle;
     uint16_t connection_handle;
-
-    // TODO: 6.3. Add handles for characterstic (type: ble_gatts_char_handles_t)
+    ble_gatts_char_handles_t first_characteristic_handle;
+    ble_gatts_char_handles_t second_characteristic_handle;
 } ble_estc_service_t;
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service);
