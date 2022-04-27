@@ -47,10 +47,11 @@
 
 #define ESTC_GATT_CHAR_1_UUID      0x1234
 #define ESTC_NOTIFY_CHAR_UUID      0x1122
+#define ESTC_INDICATION_CHAR_UUID  0x3344
 
 #define ESTC_USER_CHAR_1_DESCR     "Random user description"
 #define ESTC_NOTIFY_CHAR_DESCR     "Characteristic with nofitications"
-
+#define ESTC_INDICATION_CHAR_DESCR "Characteristic with indications"
 
 
 typedef struct
@@ -58,7 +59,7 @@ typedef struct
     uint16_t service_handle;
     uint16_t connection_handle;
     ble_gatts_char_handles_t first_characteristic_handle;
-    ble_gatts_char_handles_t second_characteristic_handle;
+    ble_gatts_char_handles_t notifying_characteristic_handle;
 } ble_estc_service_t;
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service);
