@@ -104,7 +104,7 @@ static ret_code_t estc_ble_add_first_characteristic(ble_estc_service_t *service)
 static ret_code_t estc_ble_add_characteristic_with_notifications(ble_estc_service_t *service)
 {
   const uint8_t notifying_user_descr[] = ESTC_NOTIFY_CHAR_DESCR;
-  uint16_t notifying_default_value = 0xABCD;
+  uint16_t notifying_default_value = ESTC_NOTIFY_CHAR_DEF_VAL;
 
   ret_code_t error_code = NRF_SUCCESS;
   ble_uuid_t ble_uuid = { .uuid = ESTC_NOTIFY_CHAR_UUID, .type = BLE_UUID_TYPE_BLE };
@@ -138,7 +138,7 @@ static ret_code_t estc_ble_add_characteristic_with_notifications(ble_estc_servic
 static ret_code_t estc_ble_add_characteristic_with_indications(ble_estc_service_t *service)
 {
   const uint8_t indicating_user_descr[] = ESTC_INDICATION_CHAR_DESCR;
-  uint16_t indicating_default_value = 0x0123;
+  uint16_t indicating_default_value = ESTC_INDICATION_CHAR_DEF_VAL;
 
   ret_code_t error_code = NRF_SUCCESS;
   ble_uuid_t ble_uuid = { .uuid = ESTC_NOTIFY_CHAR_UUID, .type = BLE_UUID_TYPE_BLE };
@@ -166,4 +166,23 @@ static ret_code_t estc_ble_add_characteristic_with_indications(ble_estc_service_
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->indicating_characteristic_handle);
 
   return error_code;
+}
+
+
+void notifying_char_update(uint16_t conn_handle, uint16_t value_handle,
+                           uint8_t type, uint8_t *new_value, uint16_t len)
+{
+  if (conn_handle != BLE_CONN_HANDLE_INVALID)
+  {
+    ble_gatts_hvx_params_t hvx_params;
+    memset(&hvx_params, 0, sizeof(hvx_params));
+
+    hvx_params.handle = value_handle;
+    hvx_params.type   = type;
+    hvx_params.offset = 0;
+    hvx_params.p_len  = &len;
+    hvx_params.p_data = (uint8_t*)new_value;
+
+    sd_ble_gatts_hvx(conn_handle, &hvx_params);
+  }
 }

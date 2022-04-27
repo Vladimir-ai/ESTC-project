@@ -104,9 +104,16 @@
 #define UUID_16BIT_COUNT                4
 #define UUID_128BIT_COUNT               1
 
+#define NOTIFYING_TIMER_TIMEOUT         200
+#define INDICATING_TIMER_TIMEOUT        250
+
+
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
+APP_TIMER_DEF(m_indicationing_char_timer_id);                                   /**< Indicationing characteristic timer id */
+APP_TIMER_DEF(m_notifying_char_timer_id);                                       /**< Notifying characteristic timer id */
+
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
 
@@ -122,6 +129,8 @@ static ble_uuid_t m_adv_uuids[] =                                               
 ble_estc_service_t m_estc_service; /**< ESTC example BLE service */
 
 static void advertising_start(void);
+static void indicating_char_timeout_handler(void *p_context);
+static void notifying_char_timeout_handler(void *p_context);
 
 
 /**@brief Callback function for asserts in the SoftDevice.
@@ -149,6 +158,9 @@ static void timers_init(void)
   // Initialize timer module.
   ret_code_t err_code = app_timer_init();
   APP_ERROR_CHECK(err_code);
+
+  app_timer_create(&m_indicationing_char_timer_id, APP_TIMER_MODE_REPEATED, indicating_char_timeout_handler);
+  app_timer_create(&m_notifying_char_timer_id, APP_TIMER_MODE_REPEATED, notifying_char_timeout_handler);
 }
 
 
@@ -191,6 +203,32 @@ static void gatt_init(void)
 {
     ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
     APP_ERROR_CHECK(err_code);
+}
+
+
+static void notifying_char_timeout_handler(void *p_context)
+{
+  static uint16_t last_value = ESTC_NOTIFY_CHAR_DEF_VAL;
+
+  last_value = last_value * 7 % 0xFFFFU;
+
+  notifying_char_update(m_estc_service.connection_handle,
+                        m_estc_service.notifying_characteristic_handle.value_handle,
+                        BLE_GATT_HVX_NOTIFICATION,
+                        (uint8_t *) &last_value, sizeof(last_value));
+}
+
+
+static void indicating_char_timeout_handler(void *p_context)
+{
+  static uint16_t last_value = ESTC_INDICATION_CHAR_DEF_VAL;
+
+  last_value = last_value * 3 % 0xFFFFU;
+
+  notifying_char_update(m_estc_service.connection_handle,
+                        m_estc_service.indicating_characteristic_handle.value_handle,
+                        BLE_GATT_HVX_INDICATION,
+                        (uint8_t *) &last_value, sizeof(last_value));
 }
 
 
@@ -361,6 +399,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
           err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
           APP_ERROR_CHECK(err_code);
+
+          app_timer_start(m_notifying_char_timer_id, NOTIFYING_TIMER_TIMEOUT, NULL);
+          app_timer_start(m_indicationing_char_timer_id, INDICATING_TIMER_TIMEOUT, NULL);
           break;
 
       case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -381,6 +422,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
           APP_ERROR_CHECK(err_code);
+          app_timer_stop(m_notifying_char_timer_id);
+          app_timer_stop(m_indicationing_char_timer_id);
           break;
 
       case BLE_GATTS_EVT_TIMEOUT:
