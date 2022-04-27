@@ -39,6 +39,8 @@
 
 static ret_code_t estc_ble_add_first_characteristic(ble_estc_service_t *service);
 static ret_code_t estc_ble_add_characteristic_with_notifications(ble_estc_service_t *service);
+static ret_code_t estc_ble_add_characteristic_with_indications(ble_estc_service_t *service);
+
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service)
 {
@@ -52,7 +54,15 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service)
   error_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &service->service_handle);
   VERIFY_SUCCESS(error_code);
 
-  return estc_ble_add_first_characteristic(service);
+  error_code = estc_ble_add_first_characteristic(service);
+  VERIFY_SUCCESS(error_code);
+
+  error_code = estc_ble_add_characteristic_with_notifications(service);
+  VERIFY_SUCCESS(error_code);
+
+  error_code = estc_ble_add_characteristic_with_indications(service);
+
+  return error_code;
 }
 
 static ret_code_t estc_ble_add_first_characteristic(ble_estc_service_t *service)
@@ -86,9 +96,8 @@ static ret_code_t estc_ble_add_first_characteristic(ble_estc_service_t *service)
   attr_char_value.max_len = sizeof(attr_char_value);
 
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->first_characteristic_handle);
-  VERIFY_SUCCESS(error_code);
 
-  return estc_ble_add_characteristic_with_notifications(service);
+  return error_code;
 }
 
 
@@ -121,6 +130,40 @@ static ret_code_t estc_ble_add_characteristic_with_notifications(ble_estc_servic
   attr_char_value.init_len = sizeof(notifying_default_value);
 
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->notifying_characteristic_handle);
+
+  return error_code;
+}
+
+
+static ret_code_t estc_ble_add_characteristic_with_indications(ble_estc_service_t *service)
+{
+  const uint8_t indicating_user_descr[] = ESTC_INDICATION_CHAR_DESCR;
+  uint16_t indicating_default_value = 0x0123;
+
+  ret_code_t error_code = NRF_SUCCESS;
+  ble_uuid_t ble_uuid = { .uuid = ESTC_NOTIFY_CHAR_UUID, .type = BLE_UUID_TYPE_BLE };
+  ble_gatts_char_md_t char_md = { 0 };
+  ble_gatts_attr_md_t attr_md = { 0 };
+  ble_gatts_attr_t attr_char_value = { 0 };
+
+  char_md.char_props.read = 1;
+  char_md.char_props.indicate = 1;
+  char_md.char_user_desc_max_size = sizeof(indicating_user_descr);
+  char_md.char_user_desc_size = sizeof(indicating_user_descr);
+  char_md.p_char_user_desc = indicating_user_descr;
+
+  // Configures attribute metadata. For now we only specify that the attribute will be stored in the softdevice
+  attr_md.vloc = BLE_GATTS_VLOC_STACK;
+
+  BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
+
+  attr_char_value.p_uuid = &ble_uuid;
+  attr_char_value.p_attr_md = &attr_md;
+  attr_char_value.max_len = sizeof(indicating_default_value);
+  attr_char_value.p_value = (uint8_t *) &indicating_default_value;
+  attr_char_value.init_len = sizeof(indicating_default_value);
+
+  error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->indicating_characteristic_handle);
 
   return error_code;
 }

@@ -60,6 +60,7 @@ typedef struct
     uint16_t connection_handle;
     ble_gatts_char_handles_t first_characteristic_handle;
     ble_gatts_char_handles_t notifying_characteristic_handle;
+    ble_gatts_char_handles_t indicating_characteristic_handle;
 } ble_estc_service_t;
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service);
