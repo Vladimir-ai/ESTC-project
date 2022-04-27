@@ -95,7 +95,7 @@ static ret_code_t estc_ble_add_first_characteristic(ble_estc_service_t *service)
 static ret_code_t estc_ble_add_second_characteristic(ble_estc_service_t *service)
 {
   const uint8_t char_2_user_descr[] = ESTC_USER_CHAR_2_DESCR;
-  const uint8_t char_2_default_value[] = "Read-only characteristic";
+  uint8_t char_2_default_value[] = "Read-only characteristic";
 
   ret_code_t error_code = NRF_SUCCESS;
   ble_uuid_t ble_uuid = { .uuid = ESTC_GATT_CHAR_2_UUID, .type = BLE_UUID_TYPE_BLE };
@@ -116,6 +116,8 @@ static ret_code_t estc_ble_add_second_characteristic(ble_estc_service_t *service
   attr_char_value.p_uuid = &ble_uuid;
   attr_char_value.p_attr_md = &attr_md;
   attr_char_value.max_len = sizeof(char_2_default_value);
+  attr_char_value.p_value = char_2_default_value;
+  attr_char_value.init_len = sizeof(char_2_default_value);
 
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->second_characteristic_handle);
   VERIFY_SUCCESS(error_code);
