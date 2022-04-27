@@ -120,7 +120,5 @@ static ret_code_t estc_ble_add_second_characteristic(ble_estc_service_t *service
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->second_characteristic_handle);
   VERIFY_SUCCESS(error_code);
 
-  memcpy(attr_char_value.p_value, char_2_default_value, sizeof(char_2_default_value));
-
   return error_code;
 }
