@@ -38,7 +38,7 @@
 #include "ble_srv_common.h"
 
 static ret_code_t estc_ble_add_first_characteristic(ble_estc_service_t *service);
-static ret_code_t estc_ble_add_second_characteristic(ble_estc_service_t *service);
+static ret_code_t estc_ble_add_notify_characteristic(ble_estc_service_t *service);
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service)
 {
@@ -88,22 +88,23 @@ static ret_code_t estc_ble_add_first_characteristic(ble_estc_service_t *service)
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->first_characteristic_handle);
   VERIFY_SUCCESS(error_code);
 
-  return estc_ble_add_second_characteristic(service);
+  return estc_ble_add_notify_characteristic(service);
 }
 
 
-static ret_code_t estc_ble_add_second_characteristic(ble_estc_service_t *service)
+static ret_code_t estc_ble_add_notify_characteristic(ble_estc_service_t *service)
 {
-  const uint8_t char_2_user_descr[] = ESTC_USER_CHAR_2_DESCR;
+  const uint8_t char_2_user_descr[] = ESTC_NOTIFY_CHAR_DESCR;
   const uint8_t char_2_default_value[] = "Read-only characteristic";
 
   ret_code_t error_code = NRF_SUCCESS;
-  ble_uuid_t ble_uuid = { .uuid = ESTC_GATT_CHAR_2_UUID, .type = BLE_UUID_TYPE_BLE };
+  ble_uuid_t ble_uuid = { .uuid = ESTC_NOTIFY_CHAR_UUID, .type = BLE_UUID_TYPE_BLE };
   ble_gatts_char_md_t char_md = { 0 };
   ble_gatts_attr_md_t attr_md = { 0 };
   ble_gatts_attr_t attr_char_value = { 0 };
 
   char_md.char_props.read = 1;
+  char_md.char_props.notify = 1;
   char_md.char_user_desc_max_size = sizeof(char_2_user_descr);
   char_md.char_user_desc_size = sizeof(char_2_user_descr);
   char_md.p_char_user_desc = char_2_user_descr;

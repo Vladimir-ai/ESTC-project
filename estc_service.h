@@ -36,16 +36,16 @@
 #include "ble.h"
 #include "sdk_errors.h"
 
-/* 7c8b7394-be9e-4ae9-a6b5-afff63f4f815 */
+/* 7c8b0000-be9e-4ae9-a6b5-afff63f4f815 */
 #define ESTC_BASE_UUID        { 0x15, 0xF8, 0xF4, 0x63, 0xFF, 0xAF, /* - */ 0xB5, 0xA6, /* - */ 0xE9, 0x4A, /* -  */ 0x9E, 0xBE, /* - */ 0x00, 0x00, 0x8B, 0x7C }
 /* Use 7394 as UUID */
 #define ESTC_SERVICE_UUID      0x7394
 
 #define ESTC_GATT_CHAR_1_UUID  0x1234
-#define ESTC_GATT_CHAR_2_UUID  0x1122
+#define ESTC_NOTIFY_CHAR_UUID  0x1122
 
 #define ESTC_USER_CHAR_1_DESCR "Random user description"
-#define ESTC_USER_CHAR_2_DESCR "Another characteristic"
+#define ESTC_NOTIFY_CHAR_DESCR "Notify characteristic"
 
 
 typedef struct
