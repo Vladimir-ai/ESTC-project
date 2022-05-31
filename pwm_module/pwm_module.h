@@ -14,5 +14,6 @@
 void pwm_process_one_period(uint8_t led_idx, uint8_t duty_cycle);
 void init_pwm(void);
 void reset_indicator_led(void);
+void update_leds(void);
 
 #endif /* __PWM_MODULE_H */

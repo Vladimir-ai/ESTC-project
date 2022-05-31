@@ -49,6 +49,9 @@ SRC_FILES += \
   $(PROJ_DIR)/pwm_module/pwm_module.c \
   $(PROJ_DIR)/hsv_to_rgb_module/hsv_to_rgb.c \
   $(PROJ_DIR)/nvmc_module/nvmc_module.c \
+  $(PROJ_DIR)/nvmc_module/nvmc_module.c \
+  $(PROJ_DIR)/usbd_module/usbd_module.c \
+  $(PROJ_DIR)/usbd_module/cli_usb.c \
   $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
@@ -92,6 +95,7 @@ INC_FOLDERS += \
   $(PROJ_DIR)/pwm_module \
   $(PROJ_DIR)/hsv_to_rgb_module \
   $(PROJ_DIR)/nvmc_module \
+  $(PROJ_DIR)/usbd_module \
 
 # Libraries common to all targets
 LIB_FILES += \

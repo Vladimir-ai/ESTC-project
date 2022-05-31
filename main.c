@@ -1,23 +1,24 @@
 #include <stdbool.h>
 #include "nrf_drv_systick.h"
 #include "nrf_delay.h"
-#include "tutor_bsp.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
 #include "nrf_log_backend_usb.h"
-
+#include "nrfx_nvmc.h"
 #include "app_usbd.h"
 #include "app_usbd_serial_num.h"
 
-#include "pwm_module.h"
-
 #include "g_context.h"
+#include "tutor_bsp.h"
+#include "pwm_module.h"
 #include "hsv_to_rgb.h"
 #include "nvmc_module.h"
-#include "nrfx_nvmc.h"
+#include "usbd_module.h"
+#include "cli_usb.h"
+
 
 /* Timer timeouts ==============================================*/
 #define BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS          (APP_TIMER_CLOCK_FREQ / 14)     /* RTC timer ticks */
@@ -32,7 +33,7 @@ APP_TIMER_DEF(timer_id_en_btn_timeout);
 /* btn config */
 static nrfx_gpiote_in_config_t gpiote_btn_config;
 /* app data */
-g_app_data_t app_data;
+g_app_data_t g_app_data;
 
 /* static function declaration  ====================================*/
 static void logs_init(void);
@@ -41,22 +42,22 @@ static void init_all();
 /* interrupt handlers ============================================== */
 static void timer_double_click_timeout_handler(void *p_context)
 {
-  app_data.flags.fst_click_occurred = false;
+  g_app_data.flags.fst_click_occurred = false;
 }
 
 static void timer_en_btn_timeout_handler(void *p_context)
 {
   /* btn value at the end of disable timeout */
-  if (app_data.flags.btn_pressed)
+  if (g_app_data.flags.btn_pressed)
   {
-    app_data.flags.app_is_running = true;
+    g_app_data.flags.app_is_running = true;
   }
   else
   {
-    app_data.flags.app_is_running = false;
+    g_app_data.flags.app_is_running = false;
   }
 
-  app_data.flags.btn_is_disabled = false;
+  g_app_data.flags.btn_is_disabled = false;
 }
 
 static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
@@ -64,29 +65,29 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
   static uint32_t timer_start_timestamp = 0;
 
   /* Track btn state: false is released, true is pressed now */
-  app_data.flags.btn_pressed ^= true;
+  g_app_data.flags.btn_pressed ^= true;
 
-  if (!(app_data.flags.btn_is_disabled))
+  if (!(g_app_data.flags.btn_is_disabled))
   {
-    if (app_data.flags.btn_pressed)
+    if (g_app_data.flags.btn_pressed)
     {
       NRF_LOG_INFO("Btn pressed");
 
-      if (!(app_data.flags.fst_click_occurred))
+      if (!(g_app_data.flags.fst_click_occurred))
       {
         timer_start_timestamp = app_timer_cnt_get();
-        app_data.flags.fst_click_occurred = true;
+        g_app_data.flags.fst_click_occurred = true;
         app_timer_start(timer_id_double_click_timeout, BTN_DOUBLE_CLICK_TIMEOUT_TICKS, NULL);
       }
       else if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT_TICKS)
       {
-        app_data.flags.fst_click_occurred = false;
-        app_data.current_led_mode = (app_data.current_led_mode + 1) % MODES_COUNT;
+        g_app_data.flags.fst_click_occurred = false;
+        g_app_data.current_led_mode = (g_app_data.current_led_mode + 1) % MODES_COUNT;
         reset_indicator_led();
 
-        if (!app_data.current_led_mode)
+        if (!g_app_data.current_led_mode)
         {
-          nvmc_write_new_record(app_data.current_hsv);
+          nvmc_write_new_record(g_app_data.current_hsv);
         }
       }
     }
@@ -97,12 +98,12 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
       /* It isn't double click */
       if (app_timer_cnt_diff_compute(app_timer_cnt_get(), timer_start_timestamp) < BTN_DOUBLE_CLICK_TIMEOUT_TICKS)
       {
-        app_data.flags.fst_click_occurred = false;
+        g_app_data.flags.fst_click_occurred = false;
       }
     }
 
     /* Always disable any actions with btn if it was enabled */
-    app_data.flags.btn_is_disabled = true;
+    g_app_data.flags.btn_is_disabled = true;
     app_timer_start(timer_id_en_btn_timeout, BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS, NULL);
   }
 }
@@ -115,10 +116,11 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
  */
 int main(void)
 {
-  app_data.current_hsv = nvmc_find_last_record();
+  g_app_data.current_hsv = nvmc_find_last_record();
 
   init_pwm();
   init_all();
+  init_cli(&update_leds, &nvmc_write_new_record);
 
   while (true)
   {
@@ -175,6 +177,9 @@ static void init_all()
   APP_ERROR_CHECK(app_timer_create(&timer_id_double_click_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_double_click_timeout_handler));
   APP_ERROR_CHECK(app_timer_create(&timer_id_en_btn_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_en_btn_timeout_handler));
   NRF_LOG_INFO("App timer initiated");
+
+  init_usbd();
+  NRF_LOG_INFO("USBD initiated");
 
   NRF_LOG_FLUSH();
 }
