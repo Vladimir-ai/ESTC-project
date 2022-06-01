@@ -30,23 +30,28 @@ void pwm_process_one_period(uint8_t led_idx, uint8_t duty_cycle)
 
 static void rgb_pwm_handler(nrfx_pwm_evt_type_t event_type)
 {
-  rgb_params_t rgb;
-
   if (event_type == NRFX_PWM_EVT_FINISHED)
   {
-    if (app_data.flags.app_is_running)
+    if (g_app_data.flags.app_is_running)
     {
-      rgb = color_changing_machine(&app_data.current_hsv, COLOR_CHANGE_STEP, app_data.current_led_mode);
+      g_app_data.rgb_value = color_changing_machine(&g_app_data.hsv_value, COLOR_CHANGE_STEP, g_app_data.current_led_mode);
 
-      pwm_rgb_config.sequence_values.channel_1 = rgb.red;
-      pwm_rgb_config.sequence_values.channel_2 = rgb.green;
-      pwm_rgb_config.sequence_values.channel_3 = rgb.blue;
+      pwm_rgb_config.sequence_values.channel_1 = g_app_data.rgb_value.red;
+      pwm_rgb_config.sequence_values.channel_2 = g_app_data.rgb_value.green;
+      pwm_rgb_config.sequence_values.channel_3 = g_app_data.rgb_value.blue;
 
-      NRF_LOG_INFO("Current values:");
-      NRF_LOG_INFO("h: %d, s: %d, v: %d", app_data.current_hsv.hue,
-                                      app_data.current_hsv.saturation,
-                                      app_data.current_hsv.brightness);
+      // NRF_LOG_INFO("Current values:");
+      // NRF_LOG_INFO("h: %d, s: %d, v: %d", g_app_data.hsv_value.hue,
+      //                                 g_app_data.hsv_value.saturation,
+      //                                 g_app_data.hsv_value.brightness);
     }
+    else
+    {
+      pwm_rgb_config.sequence_values.channel_1 = 0;
+      pwm_rgb_config.sequence_values.channel_2 = 0;
+      pwm_rgb_config.sequence_values.channel_3 = 0;
+    }
+
   }
 }
 
@@ -55,7 +60,7 @@ static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
   if (event_type == NRFX_PWM_EVT_FINISHED)
   {
     /* LED is always on */
-    if (step_list[app_data.current_led_mode] >= PWM_INDICATOR_TOP_VALUE)
+    if (step_list[g_app_data.current_led_mode] >= PWM_INDICATOR_TOP_VALUE)
     {
       pwm_indicator_config.sequence_values.channel_0 = PWM_INDICATOR_TOP_VALUE;
     }
@@ -71,7 +76,7 @@ static void indicator_pwm_handler(nrfx_pwm_evt_type_t event_type)
                                                     ? 2U * PWM_INDICATOR_TOP_VALUE - pwm_indicator_period
                                                     : pwm_indicator_period;
 
-      pwm_indicator_period += step_list[app_data.current_led_mode];
+      pwm_indicator_period += step_list[g_app_data.current_led_mode];
     }
   }
 }
@@ -85,7 +90,7 @@ void init_pwm(void)
 {
   /* Indicator pwm init start */
   uint8_t i = 0;
-  rgb_params_t rgb;
+  // rgb_params_t rgb;
 
   pwm_indicator_config.config = (nrfx_pwm_config_t)NRFX_PWM_DEFAULT_CONFIG;
   pwm_indicator_config.instance = (nrfx_pwm_t)NRFX_PWM_INSTANCE(1);
@@ -120,11 +125,9 @@ void init_pwm(void)
   &pwm_indicator_config.sequence_values,
                 sizeof(nrf_pwm_values_individual_t));
 
-  rgb = color_changing_machine(&app_data.current_hsv, 0, 0);
-
-  pwm_rgb_config.sequence_values.channel_1 = rgb.red;
-  pwm_rgb_config.sequence_values.channel_2 = rgb.green;
-  pwm_rgb_config.sequence_values.channel_3 = rgb.blue;
+  pwm_rgb_config.sequence_values.channel_1 = g_app_data.rgb_value.red;
+  pwm_rgb_config.sequence_values.channel_2 = g_app_data.rgb_value.green;
+  pwm_rgb_config.sequence_values.channel_3 = g_app_data.rgb_value.blue;
 
 
   nrfx_pwm_init(&pwm_rgb_config.instance,

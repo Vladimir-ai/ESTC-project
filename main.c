@@ -81,6 +81,8 @@
 #include "nrf_log_backend_usb.h"
 
 #include "estc_service.h"
+#include "g_context.h"
+#include "pwm_module.h"
 
 #define DEVICE_NAME                     "ESTC-GATT"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -104,16 +106,12 @@
 #define UUID_16BIT_COUNT                4
 #define UUID_128BIT_COUNT               1
 
-#define NOTIFYING_TIMER_TIMEOUT         200
-#define INDICATING_TIMER_TIMEOUT        250
-
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
-APP_TIMER_DEF(m_indicationing_char_timer_id);                                   /**< Indicationing characteristic timer id */
-APP_TIMER_DEF(m_notifying_char_timer_id);                                       /**< Notifying characteristic timer id */
 
+g_app_data_t g_app_data;
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
 
@@ -121,17 +119,11 @@ static ble_uuid_t m_adv_uuids[] =                                               
 {
   {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
   {ESTC_SERVICE_UUID, BLE_UUID_TYPE_BLE},
-  {ESTC_GATT_CHAR_1_UUID, BLE_UUID_TYPE_BLE},
-  {ESTC_NOTIFY_CHAR_UUID, BLE_UUID_TYPE_BLE},
-  {ESTC_SERVICE_UUID, BLE_UUID_TYPE_VENDOR_BEGIN}
+  {ESTC_GATT_CHAR_LED_RGB_UUID, BLE_UUID_TYPE_BLE}
 };
 
-ble_estc_service_t m_estc_service; /**< ESTC example BLE service */
 
 static void advertising_start(void);
-static void indicating_char_timeout_handler(void *p_context);
-static void notifying_char_timeout_handler(void *p_context);
-
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -159,8 +151,6 @@ static void timers_init(void)
   ret_code_t err_code = app_timer_init();
   APP_ERROR_CHECK(err_code);
 
-  app_timer_create(&m_indicationing_char_timer_id, APP_TIMER_MODE_REPEATED, indicating_char_timeout_handler);
-  app_timer_create(&m_notifying_char_timer_id, APP_TIMER_MODE_REPEATED, notifying_char_timeout_handler);
 }
 
 
@@ -206,32 +196,6 @@ static void gatt_init(void)
 }
 
 
-static void notifying_char_timeout_handler(void *p_context)
-{
-  static uint16_t last_value = ESTC_NOTIFY_CHAR_DEF_VAL;
-
-  last_value = last_value * 7 % 0xFFFFU;
-
-  notifying_char_update(m_estc_service.connection_handle,
-                        m_estc_service.notifying_characteristic_handle.value_handle,
-                        BLE_GATT_HVX_NOTIFICATION,
-                        (uint8_t *) &last_value, sizeof(last_value));
-}
-
-
-static void indicating_char_timeout_handler(void *p_context)
-{
-  static uint16_t last_value = ESTC_INDICATION_CHAR_DEF_VAL;
-
-  last_value = last_value * 3 % 0xFFFFU;
-
-  notifying_char_update(m_estc_service.connection_handle,
-                        m_estc_service.indicating_characteristic_handle.value_handle,
-                        BLE_GATT_HVX_INDICATION,
-                        (uint8_t *) &last_value, sizeof(last_value));
-}
-
-
 /**@brief Function for handling Queued Write Module errors.
  *
  * @details A pointer to this function will be passed to each service which may need to inform the
@@ -257,7 +221,7 @@ static void services_init(void)
   err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
   APP_ERROR_CHECK(err_code);
 
-  err_code = estc_ble_service_init(&m_estc_service);
+  err_code = estc_ble_service_init(&g_app_data.estc_service);
   APP_ERROR_CHECK(err_code);
 }
 
@@ -374,6 +338,44 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 }
 
 
+static ret_code_t update_handler(ble_evt_t const * p_ble_evt, void * p_context)
+{
+  ble_gatts_evt_write_t const * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
+  ret_code_t error_code = NRF_SUCCESS;
+
+  /* Can't use switch with non-const values :( */
+  if (p_evt_write->handle == g_app_data.estc_service.rgb_characteristic_handle.value_handle)
+  {
+    g_app_data.rgb_value = *((rgb_params_t *) p_evt_write->data);
+    g_app_data.hsv_value = hsv_by_rgb(g_app_data.rgb_value);
+
+    construct_ble_notify(g_app_data.estc_service.connection_handle,
+                         g_app_data.estc_service.hsv_characteristic_handle.value_handle,
+                         (uint8_t *)&g_app_data.hsv_value, sizeof(g_app_data.hsv_value));
+
+    NRF_LOG_INFO("rgb: red: %d; green %d; blue %d", g_app_data.rgb_value.red,
+                                                    g_app_data.rgb_value.green,
+                                                    g_app_data.rgb_value.blue);
+    NRF_LOG_INFO("ptrs: %p, %p", (void*)&g_app_data.rgb_value, (void*)p_evt_write->data);
+
+  }
+  else if (p_evt_write->handle == g_app_data.estc_service.onoff_characteristic_handle.value_handle)
+  {
+    g_app_data.flags.app_is_running = *((uint8_t *) p_evt_write->data);
+  }
+  else if(p_evt_write->handle == g_app_data.estc_service.change_speed_characteristic_handle.value_handle)
+  {
+    g_app_data.current_led_mode = *((uint8_t *) p_evt_write->data);
+  }
+  else
+  {
+    error_code = NRF_ERROR_INVALID_PARAM;
+  }
+
+  return error_code;
+}
+
+
 /**@brief Function for handling BLE events.
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
@@ -383,10 +385,13 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
   ret_code_t err_code = NRF_SUCCESS;
 
+  NRF_LOG_INFO("Event id: %d (conn_handle: %d)", p_ble_evt->header.evt_id, p_ble_evt->evt.gap_evt.conn_handle);
+
   switch (p_ble_evt->header.evt_id)
   {
       case BLE_GAP_EVT_DISCONNECTED:
           NRF_LOG_INFO("Disconnected (conn_handle: %d)", p_ble_evt->evt.gap_evt.conn_handle);
+          g_app_data.flags.app_is_running = false;
           // LED indication will be changed when advertising starts.
           break;
 
@@ -399,9 +404,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
           err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
           APP_ERROR_CHECK(err_code);
-
-          app_timer_start(m_notifying_char_timer_id, NOTIFYING_TIMER_TIMEOUT, NULL);
-          app_timer_start(m_indicationing_char_timer_id, INDICATING_TIMER_TIMEOUT, NULL);
           break;
 
       case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -422,8 +424,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
           APP_ERROR_CHECK(err_code);
-          app_timer_stop(m_notifying_char_timer_id);
-          app_timer_stop(m_indicationing_char_timer_id);
           break;
 
       case BLE_GATTS_EVT_TIMEOUT:
@@ -433,6 +433,10 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
           APP_ERROR_CHECK(err_code);
           break;
+
+      case BLE_GATTS_EVT_WRITE:
+        err_code = update_handler(p_ble_evt, p_context);
+      break;
 
       default:
           // No implementation needed.
@@ -507,11 +511,8 @@ static void advertising_init(void)
   init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
   init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
-  init.advdata.uuids_complete.uuid_cnt = UUID_16BIT_COUNT;
+  init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(*m_adv_uuids);
   init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
-
-  init.srdata.uuids_complete.uuid_cnt = UUID_128BIT_COUNT;
-  init.srdata.uuids_complete.p_uuids  = &m_adv_uuids[UUID_16BIT_COUNT];
 
 
   init.config.ble_adv_fast_enabled  = true;
@@ -602,6 +603,7 @@ int main(void)
   services_init();
   advertising_init();
   conn_params_init();
+  init_pwm();
 
   // Start execution.
   NRF_LOG_INFO("ESTC GATT server example started");
