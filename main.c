@@ -106,10 +106,12 @@
 #define UUID_16BIT_COUNT                4
 #define UUID_128BIT_COUNT               1
 
+#define INDICATING_TIMER_TIMEOUT        1000
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
+APP_TIMER_DEF(m_char_indication_timer_id);
 
 g_app_data_t g_app_data;
 
@@ -124,6 +126,7 @@ static ble_uuid_t m_adv_uuids[] =                                               
 
 
 static void advertising_start(void);
+static void char_indication_timeout_handler(void *p_context);
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -151,6 +154,7 @@ static void timers_init(void)
   ret_code_t err_code = app_timer_init();
   APP_ERROR_CHECK(err_code);
 
+  app_timer_create(&m_char_indication_timer_id, APP_TIMER_MODE_REPEATED, char_indication_timeout_handler);
 }
 
 
@@ -281,6 +285,31 @@ static void conn_params_init(void)
 }
 
 
+static void char_indication_timeout_handler(void *p_context)
+{
+  static rgb_params_t last_rgb_params = { 0 };
+  static hsv_params_t last_hsv_params = { 0 };
+
+  if (memcmp(&g_app_data.rgb_value, &last_rgb_params, sizeof(last_rgb_params)))
+  {
+    last_rgb_params = g_app_data.rgb_value;
+
+    construct_ble_notify(g_app_data.estc_service.connection_handle,
+                         g_app_data.estc_service.rgb_characteristic_handle.value_handle,
+                         (uint8_t *) &last_rgb_params, sizeof(last_rgb_params));
+  }
+
+  if (memcmp(&g_app_data.hsv_value, &last_hsv_params, sizeof(last_hsv_params)))
+  {
+    last_hsv_params = g_app_data.hsv_value;
+
+    construct_ble_notify(g_app_data.estc_service.connection_handle,
+                         g_app_data.estc_service.hsv_characteristic_handle.value_handle,
+                         (uint8_t *) &last_hsv_params, sizeof(last_hsv_params));
+  }
+}
+
+
 /**@brief Function for starting timers.
  */
 static void application_timers_start(void)
@@ -393,6 +422,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           NRF_LOG_INFO("Disconnected (conn_handle: %d)", p_ble_evt->evt.gap_evt.conn_handle);
           g_app_data.flags.app_is_running = false;
           // LED indication will be changed when advertising starts.
+          app_timer_stop(m_char_indication_timer_id);
           break;
 
       case BLE_GAP_EVT_CONNECTED:
@@ -404,6 +434,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
           err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
           APP_ERROR_CHECK(err_code);
+
+          app_timer_start(m_char_indication_timer_id, INDICATING_TIMER_TIMEOUT, NULL);
           break;
 
       case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
