@@ -48,12 +48,13 @@
 #define ESTC_GATT_CHAR_LED_RGB_UUID             0x7395
 #define ESTC_GATT_CHAR_LED_HSV_UUID             0x7396
 #define ESTC_GATT_CHAR_LED_TOGGLE_UUID          0x7397
-#define ESTC_GATT_CHAR_LED_CHANGE_SPEED_UUID    0x7398
+#define ESTC_GATT_CHAR_LED_MODE_UUID            0x7398
 
 #define ESTC_USER_CHAR_LED_RGB_DESCR            "RGB led characteristic"
 #define ESTC_HSV_CHAR_DESCR                     "HSV led characteristic"
 #define ESTC_ONOFF_CHAR_DESCR                   "LED on/off characteristic"
-#define ESTC_CHANGE_SPEED_CHAR_DESCR            "LED color change speed characteristic"
+/* 0 - No change, 1 - hue, 2 - saturation, 3 - brightness, else - no change */
+#define ESTC_LED_MODE_CHAR_DESCR                "LED mode characteristic"
 
 
 typedef struct
@@ -63,7 +64,7 @@ typedef struct
     ble_gatts_char_handles_t rgb_characteristic_handle;
     ble_gatts_char_handles_t hsv_characteristic_handle;
     ble_gatts_char_handles_t onoff_characteristic_handle;
-    ble_gatts_char_handles_t change_speed_characteristic_handle;
+    ble_gatts_char_handles_t led_mode_characteristic_handle;
 } ble_estc_service_t;
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service);

@@ -44,7 +44,7 @@
 static ret_code_t estc_ble_add_rgb_char(ble_estc_service_t *service);
 static ret_code_t estc_ble_add_hsv_char(ble_estc_service_t *service);
 static ret_code_t estc_ble_add_onoff_characteristic(ble_estc_service_t *service);
-static ret_code_t estc_ble_add_change_speed_characteristic(ble_estc_service_t *service);
+static ret_code_t estc_ble_add_led_mode_characteristic(ble_estc_service_t *service);
 
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service)
@@ -68,7 +68,7 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service)
   error_code = estc_ble_add_onoff_characteristic(service);
   VERIFY_SUCCESS(error_code);
 
-  error_code = estc_ble_add_change_speed_characteristic(service);
+  error_code = estc_ble_add_led_mode_characteristic(service);
 
   return error_code;
 }
@@ -177,12 +177,12 @@ static ret_code_t estc_ble_add_onoff_characteristic(ble_estc_service_t *service)
 }
 
 
-static ret_code_t estc_ble_add_change_speed_characteristic(ble_estc_service_t *service)
+static ret_code_t estc_ble_add_led_mode_characteristic(ble_estc_service_t *service)
 {
-  const uint8_t user_descr[] = ESTC_CHANGE_SPEED_CHAR_DESCR;
+  const uint8_t user_descr[] = ESTC_LED_MODE_CHAR_DESCR;
 
   ret_code_t error_code = NRF_SUCCESS;
-  ble_uuid_t ble_uuid = { .uuid = ESTC_GATT_CHAR_LED_CHANGE_SPEED_UUID, .type = BLE_UUID_TYPE_BLE };
+  ble_uuid_t ble_uuid = { .uuid = ESTC_GATT_CHAR_LED_MODE_UUID, .type = BLE_UUID_TYPE_BLE };
   ble_gatts_char_md_t char_md = { 0 };
   ble_gatts_attr_md_t attr_md = { 0 };
   ble_gatts_attr_t attr_char_value = { 0 };
@@ -207,7 +207,7 @@ static ret_code_t estc_ble_add_change_speed_characteristic(ble_estc_service_t *s
   attr_char_value.init_len = sizeof(g_app_data.current_led_mode);
 
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value,
-                                               &service->change_speed_characteristic_handle);
+                                               &service->led_mode_characteristic_handle);
 
   return error_code;
 }

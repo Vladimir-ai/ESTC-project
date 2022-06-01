@@ -392,7 +392,7 @@ static ret_code_t update_handler(ble_evt_t const * p_ble_evt, void * p_context)
   {
     g_app_data.flags.app_is_running = *((uint8_t *) p_evt_write->data);
   }
-  else if(p_evt_write->handle == g_app_data.estc_service.change_speed_characteristic_handle.value_handle)
+  else if(p_evt_write->handle == g_app_data.estc_service.led_mode_characteristic_handle.value_handle)
   {
     g_app_data.current_led_mode = *((uint8_t *) p_evt_write->data);
   }
