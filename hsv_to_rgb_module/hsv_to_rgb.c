@@ -1,5 +1,8 @@
 #include "hsv_to_rgb.h"
 #include "nrf_assert.h"
+#include <string.h>
+
+static bool count_down_flags[MODES_COUNT]; /* true means that we need to start counting down to prevent overflow */
 
 static void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb);
 static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool *const count_down);
@@ -128,7 +131,6 @@ static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool
  */
 rgb_params_t color_changing_machine(hsv_params_t *const hsv, uint16_t step, color_changing_mode_t mode)
 {
-  static bool count_down_flags[MODES_COUNT]; /* 1 means that we need to start counting down to prevent overflow */
   static rgb_params_t rgb_values =
   {
     .red = 0,
@@ -177,4 +179,52 @@ bool validate_hsv_by_ptr(void* ptr, uint16_t size)
   return (hsv->hue <= HUE_MAX_VALUE &&
     hsv->saturation <= SAT_MAX_VALUE &&
     hsv->brightness <= BRIGHT_MAX_VALUE);
+}
+
+
+/**
+ * @brief Using pointer for rgb
+ *  Link to algorithm: https://stackoverflow.com/questions/24152553/hsv-to-rgb-and-back-without-floating-point-math-in-python
+ *
+ * @param[in] rgb pointer to rgb params struct
+ * @returns hsv params struct equal to rgb
+ */
+hsv_params_t hsv_by_rgb(const rgb_params_t rgb)
+{
+  hsv_params_t hsv;
+
+  uint8_t rgb_max = MAX(rgb.red, MAX(rgb.green, rgb.blue));
+  uint8_t rgb_min = MIN(rgb.red, MIN(rgb.green, rgb.blue));
+
+  hsv.brightness = rgb_max;
+  hsv.brightness = COLOR_REDUCE_POW(COLOR_POW(hsv.brightness) * BRIGHT_MAX_VALUE / 255); /* from [0; 255] to [0; 100] */
+
+  if (rgb_max == 0)
+  {
+    return hsv;
+  }
+
+  hsv.saturation = 255 * (rgb_max - rgb_min) / rgb_max;
+  hsv.saturation = COLOR_REDUCE_POW(COLOR_POW(hsv.saturation) * SAT_MAX_VALUE / 255);
+
+  if (hsv.saturation == 0)
+  {
+    return hsv;
+  }
+
+  if (rgb_max == rgb.red)
+  {
+    hsv.hue = 43 * (rgb.green - rgb.blue) / (rgb_max - rgb_min);
+  }
+  else if (rgb_max == rgb.green)
+  {
+    hsv.hue = 85 + 43 * (rgb.blue - rgb.red) / (rgb_max - rgb_min);
+  }
+  else /* rgb_max == blue */
+  {
+    hsv.hue = 171 + 43 * (rgb.red - rgb.green) / (rgb_max - rgb_min);
+  }
+
+  hsv.hue = COLOR_REDUCE_POW(COLOR_POW(hsv.hue) * HUE_MAX_VALUE / 255);
+  return hsv;
 }
