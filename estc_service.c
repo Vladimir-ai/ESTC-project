@@ -46,6 +46,9 @@ static ret_code_t estc_ble_add_hsv_char(ble_estc_service_t *service);
 static ret_code_t estc_ble_add_onoff_characteristic(ble_estc_service_t *service);
 static ret_code_t estc_ble_add_led_mode_characteristic(ble_estc_service_t *service);
 
+static void construct_ble_notify(uint16_t conn_handle, uint16_t value_handle,
+                          uint8_t *new_value, uint16_t len);
+
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service)
 {
@@ -213,7 +216,7 @@ static ret_code_t estc_ble_add_led_mode_characteristic(ble_estc_service_t *servi
 }
 
 
-void construct_ble_notify(uint16_t conn_handle, uint16_t value_handle,
+static void construct_ble_notify(uint16_t conn_handle, uint16_t value_handle,
                           uint8_t *new_value, uint16_t len)
 {
   if (conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -228,5 +231,53 @@ void construct_ble_notify(uint16_t conn_handle, uint16_t value_handle,
     hvx_params.p_data = (uint8_t*)new_value;
 
     sd_ble_gatts_hvx(conn_handle, &hvx_params);
+  }
+}
+
+
+void notify_led_mode_change(void)
+{
+  if (g_app_data.flags.device_connected)
+  {
+    construct_ble_notify(
+      g_app_data.estc_service.connection_handle,
+      g_app_data.estc_service.led_mode_characteristic_handle.value_handle,
+      (uint8_t *) &g_app_data.current_led_mode, sizeof(g_app_data.current_led_mode));
+  }
+}
+
+
+void notify_led_onoff_change(void)
+{
+  if (g_app_data.flags.device_connected)
+  {
+    construct_ble_notify(
+      g_app_data.estc_service.connection_handle,
+      g_app_data.estc_service.onoff_characteristic_handle.value_handle,
+      (uint8_t *) &g_app_data.flags.app_is_running, sizeof(g_app_data.flags.app_is_running));
+  }
+}
+
+
+void notify_rgb_change(void)
+{
+  if (g_app_data.flags.device_connected)
+  {
+    construct_ble_notify(
+      g_app_data.estc_service.connection_handle,
+      g_app_data.estc_service.rgb_characteristic_handle.value_handle,
+      (uint8_t *) &g_app_data.rgb_value, sizeof(g_app_data.rgb_value));
+  }
+}
+
+
+void notify_hsv_change(void)
+{
+  if (g_app_data.flags.device_connected)
+  {
+    construct_ble_notify(
+      g_app_data.estc_service.connection_handle,
+      g_app_data.estc_service.hsv_characteristic_handle.value_handle,
+      (uint8_t *) &g_app_data.hsv_value, sizeof(g_app_data.hsv_value));
   }
 }

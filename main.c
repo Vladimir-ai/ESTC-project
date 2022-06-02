@@ -291,25 +291,15 @@ static void conn_params_init(void)
 
 static void char_indication_timeout_handler(void *p_context)
 {
-  static rgb_params_t last_rgb_params = { 0 };
   static hsv_params_t last_hsv_params = { 0 };
 
-  if (memcmp(&g_app_data.rgb_value, &last_rgb_params, sizeof(last_rgb_params)))
-  {
-    last_rgb_params = g_app_data.rgb_value;
-
-    construct_ble_notify(g_app_data.estc_service.connection_handle,
-                         g_app_data.estc_service.rgb_characteristic_handle.value_handle,
-                         (uint8_t *) &last_rgb_params, sizeof(last_rgb_params));
-  }
-
-  if (memcmp(&g_app_data.hsv_value, &last_hsv_params, sizeof(last_hsv_params)))
+  if (g_app_data.flags.device_connected &&
+      memcmp(&g_app_data.hsv_value, &last_hsv_params, sizeof(last_hsv_params)))
   {
     last_hsv_params = g_app_data.hsv_value;
 
-    construct_ble_notify(g_app_data.estc_service.connection_handle,
-                         g_app_data.estc_service.hsv_characteristic_handle.value_handle,
-                         (uint8_t *) &last_hsv_params, sizeof(last_hsv_params));
+    notify_hsv_change();
+    notify_rgb_change();
     save_state();
   }
 }
@@ -383,9 +373,7 @@ static ret_code_t update_handler(ble_evt_t const * p_ble_evt, void * p_context)
     g_app_data.rgb_value = *((rgb_params_t *) p_evt_write->data);
     g_app_data.hsv_value = hsv_by_rgb(g_app_data.rgb_value);
 
-    construct_ble_notify(g_app_data.estc_service.connection_handle,
-                         g_app_data.estc_service.hsv_characteristic_handle.value_handle,
-                         (uint8_t *)&g_app_data.hsv_value, sizeof(g_app_data.hsv_value));
+    notify_hsv_change();
 
     NRF_LOG_INFO("rgb: red: %d; green %d; blue %d", g_app_data.rgb_value.red,
                                                     g_app_data.rgb_value.green,
@@ -413,8 +401,6 @@ static ret_code_t update_handler(ble_evt_t const * p_ble_evt, void * p_context)
 }
 
 
-
-
 /**@brief Function for handling BLE events.
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
@@ -430,9 +416,10 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
   {
       case BLE_GAP_EVT_DISCONNECTED:
           NRF_LOG_INFO("Disconnected (conn_handle: %d)", p_ble_evt->evt.gap_evt.conn_handle);
-          g_app_data.flags.app_is_running = false;
           // LED indication will be changed when advertising starts.
           app_timer_stop(m_char_indication_timer_id);
+          g_app_data.flags.app_is_running = false;
+          g_app_data.flags.device_connected = false;
           break;
 
       case BLE_GAP_EVT_CONNECTED:
@@ -447,6 +434,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
           app_timer_start(m_char_indication_timer_id,  INDICATING_TIMER_TIMEOUT, NULL);
           g_app_data.flags.app_is_running = true;
+          g_app_data.flags.device_connected = true;
           break;
 
       case BLE_GAP_EVT_PHY_UPDATE_REQUEST:

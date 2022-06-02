@@ -73,7 +73,9 @@ void estc_ble_service_on_ble_event(const ble_evt_t *ble_evt, void *ctx);
 
 void estc_update_characteristic_1_value(ble_estc_service_t *service, int32_t *value);
 
-void construct_ble_notify(uint16_t conn_handle, uint16_t value_handle,
-                          uint8_t *new_value, uint16_t len);
+void notify_hsv_change(void);
+void notify_rgb_change(void);
+void notify_led_onoff_change(void);
+void notify_led_mode_change(void);
 
 #endif /* ESTC_SERVICE_H__ */
