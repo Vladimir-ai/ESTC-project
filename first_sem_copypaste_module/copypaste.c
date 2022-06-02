@@ -1,4 +1,8 @@
 #include "g_context.h"
+#include "nrf_log.h"
+#include "fstorage_module.h"
+#include "tutor_bsp.h"
+
 
 #define BTN_DISABLE_ACTIVITY_TIMEOUT_TICKS      (APP_TIMER_CLOCK_FREQ / 14)             /* RTC timer ticks */
 #define BTN_DOUBLE_CLICK_TIMEOUT_TICKS          (APP_TIMER_CLOCK_FREQ)                  /* 1 sec timeout */
@@ -8,6 +12,7 @@ STATIC_ASSERT(BTN_LONG_CLICK_TIMEOUT_TICKS < BTN_DOUBLE_CLICK_TIMEOUT_TICKS);
 APP_TIMER_DEF(timer_id_double_click_timeout);                                           /**< Double click timer */
 APP_TIMER_DEF(timer_id_en_btn_timeout);                                                 /**< Button pressed timer (need it to remove fluctuations) */
 
+static nrfx_gpiote_in_config_t gpiote_btn_config;
 
 static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
 
@@ -56,11 +61,10 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
       {
         g_app_data.flags.fst_click_occurred = false;
         g_app_data.current_led_mode = (g_app_data.current_led_mode + 1) % MODES_COUNT;
-        reset_indicator_led();
 
         if (!g_app_data.current_led_mode)
         {
-          nvmc_write_new_record(g_app_data.current_hsv);
+          save_state();
         }
       }
     }
@@ -86,4 +90,26 @@ void button_timers_init(void)
 {
   APP_ERROR_CHECK(app_timer_create(&timer_id_double_click_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_double_click_timeout_handler));
   APP_ERROR_CHECK(app_timer_create(&timer_id_en_btn_timeout, APP_TIMER_MODE_SINGLE_SHOT, &timer_en_btn_timeout_handler));
+}
+
+void buttons_init(void)
+{
+  gpiote_btn_config = (nrfx_gpiote_in_config_t)
+  {
+      .sense = NRF_GPIOTE_POLARITY_TOGGLE,
+      .pull = NRF_GPIO_PIN_PULLUP,
+      .is_watcher = false,
+      .hi_accuracy = false,
+      .skip_gpio_setup = true
+  };
+
+  init_leds();
+  init_btns();
+
+  APP_ERROR_CHECK(nrfx_gpiote_init());
+  APP_ERROR_CHECK(nrfx_gpiote_in_init(BUTTON_1, &gpiote_btn_config,
+         &btn_pressed_evt_handler));
+  NRF_LOG_INFO("GPIOTE initiated");
+
+  nrfx_gpiote_in_event_enable(BUTTON_1, true);
 }

@@ -83,7 +83,8 @@
 #include "estc_service.h"
 #include "g_context.h"
 #include "pwm_module.h"
-#include "nrf_fstorage_sd.h"
+#include "fstorage_module.h"
+#include "copypaste.h"
 
 #define DEVICE_NAME                     "ESTC-GATT"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -114,13 +115,6 @@ NRF_BLE_QWR_DEF(m_qwr);                                                         
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 APP_TIMER_DEF(m_char_indication_timer_id);
 
-typedef struct nvram_struct_s
-{
-  hsv_params_t hsv_values;
-  uint8_t led_mode;
-  uint8_t aligned[3];
-} nvram_struct_t;
-
 g_app_data_t g_app_data;
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
@@ -135,16 +129,6 @@ static ble_uuid_t m_adv_uuids[] =                                               
 
 static void advertising_start(void);
 static void char_indication_timeout_handler(void *p_context);
-static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt);
-static void save_state(void);
-static void init_flash(void);
-
-NRF_FSTORAGE_DEF(nrf_fstorage_t fstorage) =
-{
-    .evt_handler = fstorage_evt_handler,
-    .start_addr = 0xdd000,
-    .end_addr   = 0xddfff
-};
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -331,16 +315,6 @@ static void char_indication_timeout_handler(void *p_context)
 }
 
 
-void wait_for_flash_ready(nrf_fstorage_t const * p_fstorage)
-{
-    /* While fstorage is busy, sleep and wait for an event. */
-    while (nrf_fstorage_is_busy(p_fstorage))
-    {
-        (void) sd_app_evt_wait();
-    }
-}
-
-
 /**@brief Function for starting timers.
  */
 static void application_timers_start(void)
@@ -438,32 +412,6 @@ static ret_code_t update_handler(ble_evt_t const * p_ble_evt, void * p_context)
   return error_code;
 }
 
-static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
-{
-  if (p_evt->result != NRF_SUCCESS)
-  {
-    NRF_LOG_INFO("--> Event received: ERROR while executing an fstorage operation.");
-    return;
-  }
-
-  switch (p_evt->id)
-  {
-    case NRF_FSTORAGE_EVT_WRITE_RESULT:
-    {
-      NRF_LOG_INFO("--> Event received: wrote %d bytes at address 0x%x.",
-                    p_evt->len, p_evt->addr);
-    } break;
-
-    case NRF_FSTORAGE_EVT_ERASE_RESULT:
-    {
-      NRF_LOG_INFO("--> Event received: erased %d page from address 0x%x.",
-                    p_evt->len, p_evt->addr);
-    } break;
-
-    default:
-        break;
-  }
-}
 
 
 
@@ -631,7 +579,7 @@ static void buttons_leds_init(void)
 {
   ret_code_t err_code;
 
-  err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
+  err_code = bsp_init(BSP_INIT_NONE, bsp_event_handler);
   APP_ERROR_CHECK(err_code);
 
   err_code = bsp_btn_ble_init(NULL, NULL);
@@ -683,43 +631,6 @@ static void advertising_start(void)
 }
 
 
-void init_flash(void)
-{
-  int ret = nrf_fstorage_init(&fstorage, &nrf_fstorage_sd, NULL);
-  nvram_struct_t nvram_struct = { 0 };
-  APP_ERROR_CHECK(ret);
-
-  ret = nrf_fstorage_read(&fstorage, fstorage.start_addr, &nvram_struct, sizeof(nvram_struct));
-  APP_ERROR_CHECK(ret);
-
-  if (!validate_hsv_by_ptr(&nvram_struct.hsv_values, sizeof(nvram_struct.hsv_values)))
-  {
-    NRF_LOG_INFO("LED state is not set in the flash, defaulting to OFF");
-  }
-  else
-  {
-    g_app_data.current_led_mode = nvram_struct.led_mode;
-    g_app_data.hsv_value = nvram_struct.hsv_values;
-    hsv_to_rgb(&nvram_struct.hsv_values, &g_app_data.rgb_value);
-  }
-}
-
-
-void save_state(void)
-{
-  static nvram_struct_t current_state;
-  current_state.led_mode = g_app_data.current_led_mode;
-  current_state.hsv_values = g_app_data.hsv_value;
-
-  nrf_fstorage_erase(&fstorage, fstorage.start_addr, 1, NULL);
-  nrf_fstorage_write(&fstorage,
-                     fstorage.start_addr,
-                     &current_state,
-                     sizeof(current_state), NULL);
-}
-
-
-
 /**@brief Function for application main entry.
  */
 int main(void)
@@ -737,6 +648,7 @@ int main(void)
   advertising_init();
   conn_params_init();
   init_pwm();
+  buttons_init();
 
   // Start execution.
   NRF_LOG_INFO("ESTC GATT server example started");

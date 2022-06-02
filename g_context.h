@@ -23,9 +23,10 @@ typedef struct g_pwm_config_s
 typedef struct g_app_flags_s /* contains only flags */
 {
   uint8_t app_is_running;        /* true if application should change value depending on mode, else false */
-  bool fst_click_occurred;    /* true if first click was occurred */
-  bool btn_pressed;           /* false if released, true if pressed now */
-  bool btn_is_disabled;       /* true if btn won't do anything except @ref btn_state changing, else false */
+  bool fst_click_occurred;       /* true if first click was occurred */
+  bool btn_pressed;              /* false if released, true if pressed now */
+  bool btn_is_disabled;          /* true if btn won't do anything except @ref btn_state changing, else false */
+  bool device_connected;         /* true if device connected by BLE */
 } g_app_flags_t;
 
 typedef struct g_app_data_s
@@ -35,7 +36,6 @@ typedef struct g_app_data_s
   hsv_params_t hsv_value;
   ble_estc_service_t estc_service; /**< ESTC example BLE service */
   uint8_t current_led_mode; /* current LED mode */
-  // nrf_fstorage_t fstorage;
 } g_app_data_t;
 
 extern g_app_data_t g_app_data;

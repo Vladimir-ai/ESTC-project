@@ -93,12 +93,13 @@ SRC_FILES += \
   $(SDK_ROOT)/components/ble/common/ble_conn_params.c \
   $(SDK_ROOT)/components/ble/common/ble_advdata.c \
   $(SDK_ROOT)/components/ble/ble_advertising/ble_advertising.c \
-	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_pwm.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_pwm.c \
   $(PROJ_DIR)/estc_service.c \
-	$(PROJ_DIR)/pwm_module/pwm_module.c \
-	$(PROJ_DIR)/hsv_to_rgb_module/hsv_to_rgb.c \
-	$(PROJ_DIR)/bsp_module/tutor_bsp.c \
-	$(PROJ_DIR)/first_sem_copypaste_module/copypaste.c \
+  $(PROJ_DIR)/pwm_module/pwm_module.c \
+  $(PROJ_DIR)/hsv_to_rgb_module/hsv_to_rgb.c \
+  $(PROJ_DIR)/bsp_module/tutor_bsp.c \
+  $(PROJ_DIR)/first_sem_copypaste_module/copypaste.c \
+  $(PROJ_DIR)/fstorage_module/fstorage_module.c \
   $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
@@ -232,13 +233,14 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/ble/ble_dtm \
   $(SDK_ROOT)/components/ble/ble_advertising \
   $(SDK_ROOT)/components \
-	$(SDK_ROOT)/components/libraries/bootloader/dfu \
+  $(SDK_ROOT)/components/libraries/bootloader/dfu \
   $(PROJ_DIR) \
+	$(PROJ_DIR)/fstorage_module \
   $(PROJ_DIR)/hsv_to_rgb_module \
   $(PROJ_DIR)/pwm_module \
   $(PROJ_DIR)/bsp_module \
   $(PROJ_DIR)/first_sem_copypaste_module \
-	../config \
+  ../config \
 
 
 # Libraries common to all targets
