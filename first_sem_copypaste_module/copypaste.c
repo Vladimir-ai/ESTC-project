@@ -32,6 +32,7 @@ static void timer_en_btn_timeout_handler(void *p_context)
   else
   {
     g_app_data.flags.app_is_running = false;
+    notify_led_onoff_change();
   }
 
   g_app_data.flags.btn_is_disabled = false;
@@ -61,6 +62,8 @@ static void btn_pressed_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t
       {
         g_app_data.flags.fst_click_occurred = false;
         g_app_data.current_led_mode = (g_app_data.current_led_mode + 1) % MODES_COUNT;
+
+        notify_led_mode_change();
 
         if (!g_app_data.current_led_mode)
         {

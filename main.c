@@ -115,7 +115,7 @@ NRF_BLE_QWR_DEF(m_qwr);                                                         
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 APP_TIMER_DEF(m_char_indication_timer_id);
 
-g_app_data_t g_app_data;
+g_app_data_t g_app_data = { 0 };
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
 

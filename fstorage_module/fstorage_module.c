@@ -19,8 +19,8 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt);
 NRF_FSTORAGE_DEF(nrf_fstorage_t fstorage) =
 {
     .evt_handler = fstorage_evt_handler,
-    .start_addr = 0xdd000,
-    .end_addr   = 0xddfff
+    .start_addr = 0xde000,
+    .end_addr   = 0xdefff
 };
 
 
