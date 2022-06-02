@@ -98,15 +98,11 @@ SRC_FILES += \
 	$(PROJ_DIR)/pwm_module/pwm_module.c \
 	$(PROJ_DIR)/hsv_to_rgb_module/hsv_to_rgb.c \
 	$(PROJ_DIR)/bsp_module/tutor_bsp.c \
+	$(PROJ_DIR)/first_sem_copypaste_module/copypaste.c \
   $(PROJ_DIR)/main.c \
 
 # Include folders common to all targets
 INC_FOLDERS += \
-  ../config \
-  $(PROJ_DIR) \
-  $(PROJ_DIR)/hsv_to_rgb_module \
-  $(PROJ_DIR)/pwm_module \
-  $(PROJ_DIR)/bsp_module \
   $(SDK_ROOT)/modules/nrfx/mdk \
   $(SDK_ROOT)/modules/nrfx/hal \
   $(SDK_ROOT)/modules/nrfx/drivers/include \
@@ -237,6 +233,13 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/ble/ble_advertising \
   $(SDK_ROOT)/components \
 	$(SDK_ROOT)/components/libraries/bootloader/dfu \
+  $(PROJ_DIR) \
+  $(PROJ_DIR)/hsv_to_rgb_module \
+  $(PROJ_DIR)/pwm_module \
+  $(PROJ_DIR)/bsp_module \
+  $(PROJ_DIR)/first_sem_copypaste_module \
+	../config \
+
 
 # Libraries common to all targets
 LIB_FILES += \

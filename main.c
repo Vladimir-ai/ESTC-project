@@ -172,6 +172,8 @@ static void timers_init(void)
   ret_code_t err_code = app_timer_init();
   APP_ERROR_CHECK(err_code);
 
+  button_timers_init();
+
   app_timer_create(&m_char_indication_timer_id, APP_TIMER_MODE_REPEATED, char_indication_timeout_handler);
 }
 
