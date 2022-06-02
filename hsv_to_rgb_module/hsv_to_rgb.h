@@ -46,6 +46,7 @@ typedef enum color_changing_mode_e
 rgb_params_t color_changing_machine(hsv_params_t *const hsv, uint16_t step, color_changing_mode_t mode);
 
 bool validate_hsv_by_ptr(void* ptr, uint16_t size);
+void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb);
 hsv_params_t hsv_by_rgb(const rgb_params_t rgb);
 
 #endif /* _RGB_HSV_UTILS */

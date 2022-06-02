@@ -98,8 +98,8 @@ static ret_code_t estc_ble_add_rgb_char(ble_estc_service_t *service)
 
   attr_char_value.p_uuid = &ble_uuid;
   attr_char_value.p_attr_md = &attr_md;
-  attr_char_value.max_len = sizeof(rgb_params_t);
-  attr_char_value.init_len = sizeof(rgb_params_t);
+  attr_char_value.max_len = sizeof(g_app_data.rgb_value);
+  attr_char_value.init_len = sizeof(g_app_data.rgb_value);
   attr_char_value.p_value = (uint8_t *) &g_app_data.rgb_value;
 
   error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value, &service->rgb_characteristic_handle);

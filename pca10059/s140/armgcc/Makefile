@@ -103,10 +103,10 @@ SRC_FILES += \
 # Include folders common to all targets
 INC_FOLDERS += \
   ../config \
-	$(PROJ_DIR) \
-	$(PROJ_DIR)/hsv_to_rgb_module \
-	$(PROJ_DIR)/pwm_module \
-	$(PROJ_DIR)/bsp_module \
+  $(PROJ_DIR) \
+  $(PROJ_DIR)/hsv_to_rgb_module \
+  $(PROJ_DIR)/pwm_module \
+  $(PROJ_DIR)/bsp_module \
   $(SDK_ROOT)/modules/nrfx/mdk \
   $(SDK_ROOT)/modules/nrfx/hal \
   $(SDK_ROOT)/modules/nrfx/drivers/include \
@@ -236,6 +236,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/ble/ble_dtm \
   $(SDK_ROOT)/components/ble/ble_advertising \
   $(SDK_ROOT)/components \
+	$(SDK_ROOT)/components/libraries/bootloader/dfu \
 
 # Libraries common to all targets
 LIB_FILES += \

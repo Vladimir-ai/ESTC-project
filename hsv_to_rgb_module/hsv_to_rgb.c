@@ -4,7 +4,6 @@
 
 static bool count_down_flags[MODES_COUNT]; /* true means that we need to start counting down to prevent overflow */
 
-static void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb);
 static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool *const count_down);
 
 /**
@@ -15,7 +14,7 @@ static uint16_t update_ctr(uint16_t ctr, uint16_t step, uint16_t max_value, bool
  * @param[in] hsv pointer to hsv params struct
  * @param[out] rgb pointer to rgb params struct
  */
-static void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb)
+void hsv_to_rgb(const hsv_params_t *const hsv, rgb_params_t *const rgb)
 {
   ASSERT(hsv->hue <= 360);
   ASSERT(hsv->brightness <= 100);

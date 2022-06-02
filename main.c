@@ -83,6 +83,7 @@
 #include "estc_service.h"
 #include "g_context.h"
 #include "pwm_module.h"
+#include "nrf_fstorage_sd.h"
 
 #define DEVICE_NAME                     "ESTC-GATT"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -106,12 +107,19 @@
 #define UUID_16BIT_COUNT                4
 #define UUID_128BIT_COUNT               1
 
-#define INDICATING_TIMER_TIMEOUT        1000
+#define INDICATING_TIMER_TIMEOUT        APP_TIMER_TICKS(1000)                   /**< Value used to notify ble about value changing. */
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 APP_TIMER_DEF(m_char_indication_timer_id);
+
+typedef struct nvram_struct_s
+{
+  hsv_params_t hsv_values;
+  uint8_t led_mode;
+  uint8_t aligned[3];
+} nvram_struct_t;
 
 g_app_data_t g_app_data;
 
@@ -127,6 +135,16 @@ static ble_uuid_t m_adv_uuids[] =                                               
 
 static void advertising_start(void);
 static void char_indication_timeout_handler(void *p_context);
+static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt);
+static void save_state(void);
+static void init_flash(void);
+
+NRF_FSTORAGE_DEF(nrf_fstorage_t fstorage) =
+{
+    .evt_handler = fstorage_evt_handler,
+    .start_addr = 0xdd000,
+    .end_addr   = 0xddfff
+};
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -306,7 +324,18 @@ static void char_indication_timeout_handler(void *p_context)
     construct_ble_notify(g_app_data.estc_service.connection_handle,
                          g_app_data.estc_service.hsv_characteristic_handle.value_handle,
                          (uint8_t *) &last_hsv_params, sizeof(last_hsv_params));
+    save_state();
   }
+}
+
+
+void wait_for_flash_ready(nrf_fstorage_t const * p_fstorage)
+{
+    /* While fstorage is busy, sleep and wait for an event. */
+    while (nrf_fstorage_is_busy(p_fstorage))
+    {
+        (void) sd_app_evt_wait();
+    }
 }
 
 
@@ -385,8 +414,6 @@ static ret_code_t update_handler(ble_evt_t const * p_ble_evt, void * p_context)
     NRF_LOG_INFO("rgb: red: %d; green %d; blue %d", g_app_data.rgb_value.red,
                                                     g_app_data.rgb_value.green,
                                                     g_app_data.rgb_value.blue);
-    NRF_LOG_INFO("ptrs: %p, %p", (void*)&g_app_data.rgb_value, (void*)p_evt_write->data);
-
   }
   else if (p_evt_write->handle == g_app_data.estc_service.onoff_characteristic_handle.value_handle)
   {
@@ -401,8 +428,41 @@ static ret_code_t update_handler(ble_evt_t const * p_ble_evt, void * p_context)
     error_code = NRF_ERROR_INVALID_PARAM;
   }
 
+  if (error_code == NRF_SUCCESS)
+  {
+    save_state();
+  }
+
   return error_code;
 }
+
+static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
+{
+  if (p_evt->result != NRF_SUCCESS)
+  {
+    NRF_LOG_INFO("--> Event received: ERROR while executing an fstorage operation.");
+    return;
+  }
+
+  switch (p_evt->id)
+  {
+    case NRF_FSTORAGE_EVT_WRITE_RESULT:
+    {
+      NRF_LOG_INFO("--> Event received: wrote %d bytes at address 0x%x.",
+                    p_evt->len, p_evt->addr);
+    } break;
+
+    case NRF_FSTORAGE_EVT_ERASE_RESULT:
+    {
+      NRF_LOG_INFO("--> Event received: erased %d page from address 0x%x.",
+                    p_evt->len, p_evt->addr);
+    } break;
+
+    default:
+        break;
+  }
+}
+
 
 
 /**@brief Function for handling BLE events.
@@ -435,7 +495,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
           APP_ERROR_CHECK(err_code);
 
-          app_timer_start(m_char_indication_timer_id, INDICATING_TIMER_TIMEOUT, NULL);
+          app_timer_start(m_char_indication_timer_id,  INDICATING_TIMER_TIMEOUT, NULL);
+          g_app_data.flags.app_is_running = true;
           break;
 
       case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -620,6 +681,43 @@ static void advertising_start(void)
 }
 
 
+void init_flash(void)
+{
+  int ret = nrf_fstorage_init(&fstorage, &nrf_fstorage_sd, NULL);
+  nvram_struct_t nvram_struct = { 0 };
+  APP_ERROR_CHECK(ret);
+
+  ret = nrf_fstorage_read(&fstorage, fstorage.start_addr, &nvram_struct, sizeof(nvram_struct));
+  APP_ERROR_CHECK(ret);
+
+  if (!validate_hsv_by_ptr(&nvram_struct.hsv_values, sizeof(nvram_struct.hsv_values)))
+  {
+    NRF_LOG_INFO("LED state is not set in the flash, defaulting to OFF");
+  }
+  else
+  {
+    g_app_data.current_led_mode = nvram_struct.led_mode;
+    g_app_data.hsv_value = nvram_struct.hsv_values;
+    hsv_to_rgb(&nvram_struct.hsv_values, &g_app_data.rgb_value);
+  }
+}
+
+
+void save_state(void)
+{
+  static nvram_struct_t current_state;
+  current_state.led_mode = g_app_data.current_led_mode;
+  current_state.hsv_values = g_app_data.hsv_value;
+
+  nrf_fstorage_erase(&fstorage, fstorage.start_addr, 1, NULL);
+  nrf_fstorage_write(&fstorage,
+                     fstorage.start_addr,
+                     &current_state,
+                     sizeof(current_state), NULL);
+}
+
+
+
 /**@brief Function for application main entry.
  */
 int main(void)
@@ -627,6 +725,7 @@ int main(void)
   // Initialize.
   log_init();
   timers_init();
+  init_flash();
   buttons_leds_init();
   power_management_init();
   ble_stack_init();

@@ -7,6 +7,7 @@
 #include "hsv_to_rgb.h"
 #include "pwm_config.h"
 #include "estc_service.h"
+#include "nrf_fstorage.h"
 
 #define GET_RGB_PWM_CONF(g_context)                 ((g_context).app_config.pwm_rgb_config)
 #define GET_INDICATOR_PWM_CONF(g_context)           ((g_context).app_config.pwm_indicator_config)
@@ -34,6 +35,7 @@ typedef struct g_app_data_s
   hsv_params_t hsv_value;
   ble_estc_service_t estc_service; /**< ESTC example BLE service */
   uint8_t current_led_mode; /* current LED mode */
+  // nrf_fstorage_t fstorage;
 } g_app_data_t;
 
 extern g_app_data_t g_app_data;
